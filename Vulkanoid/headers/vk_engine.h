@@ -4,6 +4,12 @@
 #pragma once
 
 #include "vk_types.h"
+#include "vk_descriptor.h"
+
+#include "../vendor/vma/vk_mem_alloc.h"
+
+
+
 #include <vector>
 #include <deque>
 #include <functional>
@@ -65,6 +71,8 @@ public:
 	//draw loop
 	void draw();
 
+	void draw_background(VkCommandBuffer cmd);
+
 	//run main loop
 	void run();
 	 
@@ -93,9 +101,31 @@ public:
 	std::vector<VkImageView> _swapchainImagesView;
 	VkExtent2D _swapchainExtent;
 
+	VmaAllocator _allocator;
+
+	// allocation for image
+	AllocatedImage _drawImage;
+	VkExtent2D _drawExtent;
+
+
+	//Descriptors
+	DescriptorAllocator globalDescriptorAllocator;
+	VkDescriptorSet _drawImageDescriptors;
+	VkDescriptorSetLayout _drawImageDescriptorLayout;
+
+	// Pipelines
+	VkPipeline _gradientPipeline;
+	VkPipelineLayout _gradientPipelineLayout;
 
 	// other data
 	DeletionQueue _mainDeletionQueue;
+
+	// immediate submit structs
+	VkFence _immediateFence;
+	VkCommandBuffer _immediateCommandBuffer;
+	VkCommandPool _immediateCommandPool;
+	// immediate submit
+	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
 private:
 	void init_vulkan();
@@ -106,4 +136,15 @@ private:
 	// swapchain //
 	void create_swapchain(uint32_t width, uint32_t height);
 	void destroy_swapchain();
+
+	// descriptors
+	void init_descriptors();
+
+	// pipelines
+	void init_pipelines();
+	void init_background_pipelines();
+
+
+	void init_imgui();
+	void draw_imgui(VkCommandBuffer cmdBuffer, VkImageView targetImageView);
 };

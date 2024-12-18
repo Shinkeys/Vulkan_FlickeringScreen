@@ -108,3 +108,85 @@ VkSubmitInfo2 vkinit::submit_info(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSub
 
 	return info;
 }
+
+VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent)
+{
+	VkImageCreateInfo info{};
+	info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	info.pNext = nullptr;
+
+	info.imageType = VK_IMAGE_TYPE_2D;
+
+	info.format = format;
+	info.extent = extent;
+
+	info.mipLevels = 1;
+	info.arrayLayers = 1;
+	
+	// it's used for MSAA. Not using it so default for 1
+	info.samples = VK_SAMPLE_COUNT_1_BIT;
+
+	// storing image in the best gpu format
+	// OPTIMAL - the best, LINEAR - if we want to read image from cpu
+	info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	info.usage = usageFlags;
+
+	return info;
+}
+
+VkImageViewCreateInfo vkinit::imageview_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspectFlags)
+{
+	// image view for depth
+	VkImageViewCreateInfo info{};
+
+	info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	info.pNext = nullptr;
+
+	info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	info.image = image;
+	info.format = format;
+	info.subresourceRange.baseMipLevel = 0;
+	info.subresourceRange.levelCount = 1;
+	info.subresourceRange.baseArrayLayer = 0;
+	info.subresourceRange.layerCount = 1;
+	info.subresourceRange.aspectMask = aspectFlags;
+
+	return info;
+}
+
+// IMGUI
+VkRenderingAttachmentInfo vkinit::attachment_info(VkImageView view,
+	VkClearValue* clear, VkImageLayout layout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */)
+{
+	VkRenderingAttachmentInfo colorAttachment{};
+	colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+	colorAttachment.pNext = nullptr;
+
+	colorAttachment.imageView = view;
+	colorAttachment.imageLayout = layout;
+	colorAttachment.loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	if (clear)
+	{
+		colorAttachment.clearValue = *clear;
+	}
+
+	return colorAttachment;
+}
+
+VkRenderingInfo vkinit::rendering_info(
+	VkExtent2D extent, VkRenderingAttachmentInfo* colorAttachment, VkRenderingAttachmentInfo* depthAttachment)
+{
+	VkRenderingInfo renderingInfo{};
+	renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+	renderingInfo.pNext = nullptr;
+	
+	renderingInfo.renderArea = VkRect2D{ VkOffset2D{0,0}, extent };
+	renderingInfo.layerCount = 1;
+	renderingInfo.colorAttachmentCount = 1;
+	renderingInfo.pColorAttachments = colorAttachment;
+	renderingInfo.pDepthAttachment = depthAttachment;
+	renderingInfo.pStencilAttachment = nullptr;
+
+	return renderingInfo;
+}

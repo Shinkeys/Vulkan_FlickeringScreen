@@ -4,5 +4,30 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include "../vendor/vma/vk_mem_alloc.h"
+
+#include <iostream>
 
 //we will add our main reusable types here
+struct AllocatedImage
+{
+	VkImage image;
+	VkImageView imageView;
+	VmaAllocation allocation;
+	VkExtent3D imageExtent;
+	VkFormat imageFormat;
+};
+
+
+// macro to check for Vulkan iteractions errors
+#define VK_CHECK(x)                                                 \
+	do                                                              \
+	{                                                               \
+		VkResult err{x};                                           \
+		if (err)                                                    \
+		{                                                           \
+			std::cout <<"Detected Vulkan error: " << err << std::endl; \
+			abort();                                                \
+		}                                                           \
+	} while (0)
+
