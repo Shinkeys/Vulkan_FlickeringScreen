@@ -5,15 +5,20 @@
 
 #include "vk_types.h"
 #include "vk_descriptor.h"
+#include "vk_pipelines.h"
 
 #include "../vendor/vma/vk_mem_alloc.h"
-
+#include "../vendor/glm/glm/glm.hpp"
 
 
 #include <vector>
 #include <deque>
+#include <array>
 #include <functional>
 
+#define DEFAULT_FENCE_TIMEOUT 100000000000
+#define WIDTH 1920
+#define HEIGHT 1080
 
 // could make it better later to delete every vulkan handle separately 
 struct DeletionQueue
@@ -50,7 +55,7 @@ struct FrameData
 };
 
 
-constexpr unsigned int FRAME_OVERLAP = 2;
+constexpr unsigned int MAX_CONCURRENT_FRAMES = 2;
 
 class VulkanEngine {
 public:
@@ -78,9 +83,9 @@ public:
 	 
 
 	// setting up commands pool to send it to VkQueue later. VkCommandPool -> VkCommandBuffer -> VkQueue
-	FrameData _frames[FRAME_OVERLAP];
+	FrameData _frames[MAX_CONCURRENT_FRAMES];
 
-	FrameData& get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; };
+	FrameData& get_current_frame() { return _frames[_frameNumber % MAX_CONCURRENT_FRAMES]; };
 
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
@@ -107,15 +112,12 @@ public:
 	AllocatedImage _drawImage;
 	VkExtent2D _drawExtent;
 
-
-	//Descriptors
-	DescriptorAllocator globalDescriptorAllocator;
-	VkDescriptorSet _drawImageDescriptors;
-	VkDescriptorSetLayout _drawImageDescriptorLayout;
+	VkFormat _depthFormat;
+	DepthStencil _depthStencil;
 
 	// Pipelines
-	VkPipeline _gradientPipeline;
-	VkPipelineLayout _gradientPipelineLayout;
+	VkPipeline _pipeline;
+	VkPipelineLayout _pipelineLayout;
 
 	// other data
 	DeletionQueue _mainDeletionQueue;
@@ -137,14 +139,64 @@ private:
 	void create_swapchain(uint32_t width, uint32_t height);
 	void destroy_swapchain();
 
-	// descriptors
-	void init_descriptors();
 
 	// pipelines
-	void init_pipelines();
-	void init_background_pipelines();
+	void CreatePipeline();
 
 
 	void init_imgui();
 	void draw_imgui(VkCommandBuffer cmdBuffer, VkImageView targetImageView);
+
+	void SetupDepthStencil();
+
+	struct Vertex
+	{
+		float position[3];
+		float color[3];
+	};
+
+	struct VulkanBuffer
+	{
+		VkDeviceMemory memory{ VK_NULL_HANDLE };
+		VkBuffer handle{ VK_NULL_HANDLE };
+	};
+
+
+	VulkanBuffer vertexBuffer;
+	VulkanBuffer indexBuffer;
+	uint32_t indexCount;
+
+	// uniform buffer block object
+	struct UniformBuffer : VulkanBuffer
+	{
+		// descriptor set stores the resources bound to the binding points in shader
+		VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
+
+		uint8_t* mapped{ nullptr };
+	};
+
+	// one ubo per frame, so we can have overframe overlap to be sure uniforms arent updated while still in use
+	std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> _uniformBuffers;
+
+
+	struct ShaderData
+	{
+		glm::mat4 modelMatrix;
+		glm::mat4 viewMatrix;
+		glm::mat4 projMatrix;
+	};
+
+	// for triangle
+	void CreateVertexBuffer();
+	VkPhysicalDeviceMemoryProperties deviceMemoryProperties{};
+	uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties);
+
+	// descriptors
+	void CreateDescriptors();
+	//Descriptors
+	DescriptorAllocator globalDescriptorAllocator;
+	VkDescriptorSet _drawImageDescriptors;
+	VkDescriptorPool _descriptorPool;
+	VkDescriptorSetLayout _drawImageDescriptorLayout;
+	void CreateUniformBuffers();
 };

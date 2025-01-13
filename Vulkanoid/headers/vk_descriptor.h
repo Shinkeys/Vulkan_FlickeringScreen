@@ -25,15 +25,9 @@ class DescriptorAllocator
 private:
 
 public:
-	struct PoolSizeRatio
-	{
-		VkDescriptorType type;
-		float ratio;
-	};
 
 	VkDescriptorPool pool;
 
-	void init_pool(VkDevice device, uint32_t maxSets, std::span<PoolSizeRatio> poolRatios);
 	void clear_pool(VkDevice device);
 	void destroy_pool(VkDevice device);
 

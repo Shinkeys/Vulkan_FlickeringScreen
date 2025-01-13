@@ -1,8 +1,8 @@
 #include "../headers/vk_pipelines.h"
 
 
-bool vkutil::load_shader_module(const char* filePath, 
-	VkDevice device, VkShaderModule* ourShaderModule)
+VkShaderModule vkutil::LoadShader(const char* filePath,
+	VkDevice device)
 {
 	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
@@ -44,6 +44,6 @@ bool vkutil::load_shader_module(const char* filePath,
 		return false;
 	}
 
-	*ourShaderModule = shaderModule;
-	return true;
+	
+	return shaderModule;
 }

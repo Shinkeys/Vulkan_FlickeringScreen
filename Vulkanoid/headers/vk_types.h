@@ -18,6 +18,13 @@ struct AllocatedImage
 	VkFormat imageFormat;
 };
 
+struct DepthStencil
+{
+	VkImage image;
+	VkDeviceMemory memory;
+	VkImageView view;
+};
+
 
 // macro to check for Vulkan iteractions errors
 #define VK_CHECK(x)                                                 \
