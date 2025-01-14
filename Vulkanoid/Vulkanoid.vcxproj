@@ -137,6 +137,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\vk_tools.cpp" />
     <ClCompile Include="precompiled\stdafx.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\vk_descriptor.cpp" />
@@ -159,8 +160,13 @@
     <ClInclude Include="headers\vk_images.h" />
     <ClInclude Include="headers\vk_initializers.h" />
     <ClInclude Include="headers\vk_pipelines.h" />
+    <ClInclude Include="headers\vk_tools.h" />
     <ClInclude Include="headers\vk_types.h" />
     <ClInclude Include="precompiled\stdafx.h" />
+    <ClInclude Include="vendor\glm\glm\gtc\matrix_transform.hpp" />
+    <ClInclude Include="vendor\glm\glm\mat4x4.hpp" />
+    <ClInclude Include="vendor\glm\glm\vec3.hpp" />
+    <ClInclude Include="vendor\glm\glm\vec4.hpp" />
     <ClInclude Include="vendor\imgui\imconfig.h" />
     <ClInclude Include="vendor\imgui\imgui.h" />
     <ClInclude Include="vendor\imgui\imgui_impl_glfw.h" />
@@ -172,6 +178,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\gradient.comp" />
+    <None Include="shaders\main.frag" />
+    <None Include="shaders\main.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

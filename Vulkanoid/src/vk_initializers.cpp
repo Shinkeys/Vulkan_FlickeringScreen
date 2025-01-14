@@ -190,3 +190,12 @@ VkRenderingInfo vkinit::rendering_info(
 
 	return renderingInfo;
 }
+
+VkImageMemoryBarrier vkinit::imageMemoryBarrier()
+{
+	VkImageMemoryBarrier imageMemoryBarrier{};
+	imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	return imageMemoryBarrier;
+}

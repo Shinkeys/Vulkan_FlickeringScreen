@@ -34,4 +34,5 @@ namespace vkinit
 		VkImageView view, VkClearValue* clear, VkImageLayout layout);
 	VkRenderingInfo rendering_info(
 		VkExtent2D extent, VkRenderingAttachmentInfo* colorAttachment, VkRenderingAttachmentInfo* depthAttachment);
+	VkImageMemoryBarrier imageMemoryBarrier();
 }

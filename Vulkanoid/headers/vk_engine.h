@@ -6,9 +6,11 @@
 #include "vk_types.h"
 #include "vk_descriptor.h"
 #include "vk_pipelines.h"
+#include "vk_tools.h"
 
 #include "../vendor/vma/vk_mem_alloc.h"
 #include "../vendor/glm/glm/glm.hpp"
+#include "../vendor/glm/glm/gtc/matrix_transform.hpp"
 
 
 #include <vector>
@@ -63,7 +65,7 @@ public:
 	bool _isInitialized{ false };
 	int _frameNumber{ 0 };
 
-	VkExtent2D _windowExtent{ 1700 , 900 };
+	VkExtent2D _windowExtent{ WIDTH , HEIGHT };
 
 	struct GLFWwindow* _window{ nullptr };
 
@@ -128,7 +130,7 @@ public:
 	VkCommandPool _immediateCommandPool;
 	// immediate submit
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
-
+	~VulkanEngine();
 private:
 	void init_vulkan();
 	void init_swapchain();

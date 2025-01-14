@@ -8,8 +8,7 @@ VkShaderModule vkutil::LoadShader(const char* filePath,
 
 	if (!file)
 	{
-		std::cout << "Could not open your file!";
-		return false;
+		throw "Unable to load shaders!";
 	}
 
 	// getting file size
@@ -40,8 +39,7 @@ VkShaderModule vkutil::LoadShader(const char* filePath,
 	VkShaderModule shaderModule;
 	if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
 	{
-		std::cout << "Error in shader creation!";
-		return false;
+		std::cout << "Unable to create shader module!";
 	}
 
 	

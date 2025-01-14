@@ -21,6 +21,10 @@
 #include <chrono>
 constexpr bool bUseValidationLayers{ true };
 
+VulkanEngine::~VulkanEngine()
+{
+	cleanup();
+}
 void VulkanEngine::init()
 {
 	// Initialize GLFW
@@ -49,9 +53,13 @@ void VulkanEngine::init()
 
 	init_sync_structures();
 
+	CreateVertexBuffer();
+
+	CreateUniformBuffers();
+
 	CreateDescriptors();
 	
-	init_pipelines();
+	CreatePipeline();
 
 	init_imgui();
 
@@ -106,6 +114,9 @@ void VulkanEngine::init_vulkan()
 		.select()
 		.value() };
 
+
+	vkGetPhysicalDeviceMemoryProperties(physDevice, &deviceMemoryProperties);
+
 	// final vulkan device
 	vkb::DeviceBuilder deviceBuilder{ physDevice };
 
@@ -115,8 +126,11 @@ void VulkanEngine::init_vulkan()
 	// get the vkdevice handle used in the rest of vulkan application
 	_device = vkbDevice.device;
 	_chosenDevice = physDevice.physical_device;
+	
 
-
+	// depth
+	vktool::GetSupportedDepthFormat(physDevice, &_depthFormat);
+	SetupDepthStencil();
 	// getting a graphics queue with vk bootstrap
 	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
@@ -325,7 +339,7 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd)
 	VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
 
 	// binding the gradient drawing
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pipeline);
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 
 	// binding descriptor set containing the draw image for the compute pipeline
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, 
@@ -340,17 +354,32 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd)
 void VulkanEngine::draw()
 {
 	// waiting until gpu has finished rendering last frame. 1 sec between
-	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000  )); // 1 bill
+	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, VK_TRUE, UINT64_MAX)); 
 
 	get_current_frame()._deletionQueue.flush();
 
+	uint32_t imageIndex{};
 
 	VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 
-	// requesting image from swapchain
-	uint32_t swapchainImageIndex;
 	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, 
-		get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIndex));
+		get_current_frame()._swapchainSemaphore, nullptr, &imageIndex));
+
+	// update uniform buffer for the next frame
+	ShaderData shaderData{};
+	glm::mat4 projection = glm::perspective(90.0f, static_cast<float>(WIDTH) /
+		static_cast<float>(HEIGHT), 0.1f, 100.0f);
+	glm::mat4 view = glm::lookAt(glm::vec3{ 0.0f, 1.0f, 1.0f },
+		glm::vec3{ 0.0f, 0.0f, 0.0f },
+		glm::vec3 { 0.0f, 1.0f, 0.0f });
+	glm::mat4 model = glm::mat4(1.0f);
+
+	shaderData.projMatrix = projection;
+	shaderData.viewMatrix = view;
+	shaderData.modelMatrix = model;
+
+	// copy matrices to the current frame UBO
+	memcpy(_uniformBuffers[_frameNumber].mapped, &shaderData, sizeof(ShaderData));
 
 
 	VkCommandBuffer cmd = get_current_frame()._mainCommandBuffer;
@@ -362,41 +391,101 @@ void VulkanEngine::draw()
 	// begin the command buffer recording
 	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-	_drawExtent.width = _drawImage.imageExtent.width;
-	_drawExtent.height = _drawImage.imageExtent.height;
-
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
-	// overwrite general layout
-	vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+	// for background IMAGE
+	//_drawExtent.width = _drawImage.imageExtent.width;
+	//_drawExtent.height = _drawImage.imageExtent.height;
 
-	draw_background(cmd);
+	//// with dynamic rendering need to explicitly add layout transition by using barries
+	//vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+	////draw_background(cmd);
+	/*vkutil::transition_image(cmd, _drawImage.image, 
+		VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);*/
 	
+
 	// transition img and swapchain img into correct  transfer layouts
-	vkutil::transition_image(cmd, _drawImage.image, 
-		VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex], 
-		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	vkutil::transition_image(cmd, _swapchainImages[imageIndex], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+	// transition image for depth
+	vkutil::transition_image(cmd, _depthStencil.image, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+		| VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 
+		VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 
+		VkImageSubresourceRange{ VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
 
-	// execute a copy from draw image to swapchain
-	vkutil::copy_image_to_image(cmd, _drawImage.image, 
-		_swapchainImages[swapchainImageIndex], _drawExtent, _swapchainExtent);
 
-	// set	swapchain img layout to present so we see it on the screen
-	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex],
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	// define attachments used in dynamic rendering
+	VkRenderingAttachmentInfo colorAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+	colorAttachment.imageView = _swapchainImagesView[imageIndex];
+	colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachment.clearValue.color = { 0.0f, 0.0f, 0.2f, 0.0f };
+	// Depth/stencil attachment
+	VkRenderingAttachmentInfo depthStencilAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+	depthStencilAttachment.imageView = _depthStencil.view;
+	depthStencilAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	depthStencilAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthStencilAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthStencilAttachment.clearValue.depthStencil = { 1.0f,  0 };
+
+	VkRenderingInfo renderingInfo{ VK_STRUCTURE_TYPE_RENDERING_INFO_KHR };
+	renderingInfo.renderArea = { 0, 0, WIDTH, HEIGHT };
+	renderingInfo.layerCount = 1;
+	renderingInfo.colorAttachmentCount = 1;
+	renderingInfo.pColorAttachments = &colorAttachment;
+	renderingInfo.pDepthAttachment = &depthStencilAttachment;
+	renderingInfo.pStencilAttachment = &depthStencilAttachment;
+
+
+
+
+	//// execute a copy from draw image to swapchain
+	//vkutil::copy_image_to_image(cmd, _drawImage.image, 
+	//	_swapchainImages[swapchainImageIndex], _drawExtent, _swapchainExtent);
+
+	//// set	swapchain img layout to present so we see it on the screen
+	//vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex],
+	//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+	//	VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	// drawing imgui into swapchain
-	draw_imgui(cmd, _swapchainImagesView[swapchainImageIndex]);
+	//draw_imgui(cmd, _swapchainImagesView[swapchainImageIndex]);
+
+	// Start a dynamic rendering section
+	vkCmdBeginRendering(cmd, &renderingInfo);
+	// Update dynamic viewport state
+	VkViewport viewport{ 0.0f, 0.0f, (float)WIDTH, (float)HEIGHT, 0.0f, 1.0f };
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
+	// Update dynamic scissor state
+	VkRect2D scissor{ 0, 0, WIDTH, HEIGHT};
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
+	// Bind descriptor set for the current frame's uniform buffer, so the shader uses the data from that buffer for this draw
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_uniformBuffers[_frameNumber].descriptorSet, 0, nullptr);
+	// The pipeline (state object) contains all states of the rendering pipeline, binding it will set all the states specified at pipeline creation time
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
+	// Bind triangle vertex buffer (contains position and colors)
+	VkDeviceSize offsets[1]{ 0 };
+	vkCmdBindVertexBuffers(cmd, 0, 1, &vertexBuffer.handle, offsets);
+	// Bind triangle index buffer
+	vkCmdBindIndexBuffer(cmd, indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
+	// Draw indexed triangle
+	vkCmdDrawIndexed(cmd, indexCount, 1, 0, 0, 0);
+	// Finish the current dynamic rendering section
+	vkCmdEndRendering(cmd);
+
 
 	// setting swapchain image layout to present
-	vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex],
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+	vkutil::transition_image(cmd, _swapchainImages[imageIndex],
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
+		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
 	// finalize cmd buffer
 	VK_CHECK(vkEndCommandBuffer(cmd));
-	
-
 
 
 	//prepare the submission to the queue. 
@@ -427,12 +516,12 @@ void VulkanEngine::draw()
 	presentInfo.pWaitSemaphores = &get_current_frame()._renderSemaphore;
 	presentInfo.waitSemaphoreCount = 1;
 
-	presentInfo.pImageIndices = &swapchainImageIndex;
+	presentInfo.pImageIndices = &imageIndex;
 
 	VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
 	//increase the number of frames drawn
-	_frameNumber++;
+	_frameNumber = (_frameNumber + 1) % MAX_CONCURRENT_FRAMES;
 		
 }
 
@@ -553,8 +642,8 @@ void VulkanEngine::CreatePipeline()
 	vertexInputAttributs[0].format = VK_FORMAT_R32G32B32_SFLOAT;
 	vertexInputAttributs[0].offset = offsetof(Vertex, position);
 	// location 1: color
-	vertexInputAttributs[1].binding = 1;
-	vertexInputAttributs[1].location = 0;
+	vertexInputAttributs[1].binding = 0;
+	vertexInputAttributs[1].location = 1;
 	// color attribute
 	vertexInputAttributs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 	vertexInputAttributs[1].offset = offsetof(Vertex, color);
@@ -573,14 +662,14 @@ void VulkanEngine::CreatePipeline()
 	// vertex shader
 	shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-	shaderStages[0].module = vkutil::LoadShader("shaders/main.vert.spv", _device);
+	shaderStages[0].module = vkutil::LoadShader("shaders/main_vert.spv", _device);
 	shaderStages[0].pName = "main";
 	assert(shaderStages[0].module != VK_NULL_HANDLE);
 
 	// fragment shader
 	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	shaderStages[1].module = vkutil::LoadShader("shaders/main.frag.spv", _device);
+	shaderStages[1].module = vkutil::LoadShader("shaders/main_frag.spv", _device);
 	shaderStages[1].pName = "main";
 	assert(shaderStages[1].module != VK_NULL_HANDLE);
 	
@@ -601,6 +690,7 @@ void VulkanEngine::CreatePipeline()
 	pipelineCI.pRasterizationState = &rasterizationStateCI;
 	pipelineCI.pDepthStencilState = &depthStencilStateCI;
 	pipelineCI.pDynamicState = &dynamicStateCI;
+	pipelineCI.pColorBlendState = &colorBlendStateCI;
 	pipelineCI.pMultisampleState = &multisampleStateCI;
 	pipelineCI.pViewportState = &viewportStateCI;
 	pipelineCI.pNext = &pipelineRenderingCI;
@@ -791,9 +881,9 @@ void VulkanEngine::CreateVertexBuffer()
 	memAlloc.allocationSize = memoryReqs.size;
 
 	// request a host visible memory type that can be used to copy to
-	memAlloc.memoryTypeIndex = GetMemoryTypeIndex(memoryReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VK_CHECK(vkAllocateMemory(_device, &memAlloc, nullptr, &vertexBuffer.memory));
-	VK_CHECK(vkBindBufferMemory(_device, vertexBuffer.handle, vertexBuffer.memory, 0));
+	memAlloc.memoryTypeIndex = GetMemoryTypeIndex(memoryReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	VK_CHECK(vkAllocateMemory(_device, &memAlloc, nullptr, &stagingBuffer.memory));
+	VK_CHECK(vkBindBufferMemory(_device, stagingBuffer.handle, stagingBuffer.memory, 0));
 
 	// map the data buffer and copy vertices and indices to it, so we can use a single buffer as the source for both index and vert buffers
 	uint8_t* data{ nullptr };
@@ -956,7 +1046,7 @@ void VulkanEngine::CreateDescriptors()
 		writeDescSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		writeDescSet.pBufferInfo = &bufferInfo;
 		writeDescSet.dstBinding = 0;
-		vkUpdateDescriptorSets(_device, 1, &writeDescSet, 0, nullptr);
+		vkUpdateDescriptorSets(_device, 1, &writeDescSet, 0, VK_NULL_HANDLE);
 	}
 
 	// descriptor allocator and new layout should be cleaned up
