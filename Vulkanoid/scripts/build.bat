@@ -1,0 +1,3 @@
+	echo Compiling shader...
+..\bin\glslangValidator.exe  -V ..\shaders\main.vert -o ..\shaders\main_vert.spv
+..\bin\glslangValidator.exe  -V ..\shaders\main.frag -o ..\shaders\main_frag.spv

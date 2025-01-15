@@ -7,10 +7,10 @@
 #include "vk_descriptor.h"
 #include "vk_pipelines.h"
 #include "vk_tools.h"
+#include "window.h"
 
 #include "../vendor/vma/vk_mem_alloc.h"
 #include "../vendor/glm/glm/glm.hpp"
-#include "../vendor/glm/glm/gtc/matrix_transform.hpp"
 
 
 #include <vector>
@@ -19,31 +19,9 @@
 #include <functional>
 
 #define DEFAULT_FENCE_TIMEOUT 100000000000
-#define WIDTH 1920
-#define HEIGHT 1080
 
-// could make it better later to delete every vulkan handle separately 
-struct DeletionQueue
-{
-	std::deque<std::function<void()>> toDelete;
 
-	void push_func(std::function<void()>&& func)
-	{
-		toDelete.push_back(func);
-	}
 
-	// reverse iterating through "array" because Vulkan works by rule:
-	// First in - last out
-	void flush()
-	{
-		for (auto it = toDelete.rbegin(); it != toDelete.rend(); ++it)
-		{
-			(*it)();
-		}
-
-		toDelete.clear();
-	}
-};
 
 struct FrameData
 {
@@ -53,7 +31,14 @@ struct FrameData
 	VkFence _renderFence;
 	VkSemaphore _renderSemaphore, _swapchainSemaphore;
 
-	DeletionQueue _deletionQueue;
+};
+
+struct ImmediateData
+{
+	// immediate submit structs
+	VkFence _immediateFence;
+	VkCommandBuffer _immediateCommandBuffer;
+	VkCommandPool _immediateCommandPool;
 };
 
 
@@ -65,9 +50,6 @@ public:
 	bool _isInitialized{ false };
 	int _frameNumber{ 0 };
 
-	VkExtent2D _windowExtent{ WIDTH , HEIGHT };
-
-	struct GLFWwindow* _window{ nullptr };
 
 	//initializes everything in the engine
 	void init();
@@ -77,8 +59,6 @@ public:
 
 	//draw loop
 	void draw();
-
-	void draw_background(VkCommandBuffer cmd);
 
 	//run main loop
 	void run();
@@ -117,21 +97,21 @@ public:
 	VkFormat _depthFormat;
 	DepthStencil _depthStencil;
 
+	
 	// Pipelines
 	VkPipeline _pipeline;
 	VkPipelineLayout _pipelineLayout;
 
-	// other data
-	DeletionQueue _mainDeletionQueue;
+	ImmediateData _immediate;
 
-	// immediate submit structs
-	VkFence _immediateFence;
-	VkCommandBuffer _immediateCommandBuffer;
-	VkCommandPool _immediateCommandPool;
 	// immediate submit
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
-	~VulkanEngine();
+
 private:
+
+	Window _windowManager;
+	Camera _camera;
+
 	void init_vulkan();
 	void init_swapchain();
 	void init_commands();
@@ -154,7 +134,6 @@ private:
 	struct Vertex
 	{
 		float position[3];
-		float color[3];
 	};
 
 	struct VulkanBuffer
@@ -201,4 +180,5 @@ private:
 	VkDescriptorPool _descriptorPool;
 	VkDescriptorSetLayout _drawImageDescriptorLayout;
 	void CreateUniformBuffers();
+	void CleanBuffers();
 };

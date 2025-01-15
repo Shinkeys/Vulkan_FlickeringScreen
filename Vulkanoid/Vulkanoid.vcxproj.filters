@@ -63,6 +63,12 @@
     <ClCompile Include="src\vk_tools.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Systems\window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Systems\camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\vk_engine.h">
@@ -125,10 +131,19 @@
     <ClInclude Include="headers\vk_tools.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="headers\camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\window.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\gradient.comp" />
     <None Include="shaders\main.vert" />
     <None Include="shaders\main.frag" />
+    <None Include="scripts\build.bat">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
