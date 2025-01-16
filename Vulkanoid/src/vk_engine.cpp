@@ -24,12 +24,11 @@ constexpr bool bUseValidationLayers{ true };
 
 void VulkanEngine::init()
 {
-	_windowManager.InitializeGLFW();
+	_windowManager->InitializeGLFW();
 
 	init_vulkan();
 
 	init_swapchain();
-
 	init_commands();
 
 	init_sync_structures();
@@ -67,7 +66,7 @@ void VulkanEngine::init_vulkan()
 	_instance = vkb_inst.instance;
 	_debug_messenger = vkb_inst.debug_messenger;
 
-	_windowManager.CreateWindowSurface(_instance, &_surface);
+	_windowManager->CreateWindowSurface(_instance, &_surface);
 	
 	// enabling features from vk 1.3
 	VkPhysicalDeviceVulkan13Features features{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
@@ -122,13 +121,13 @@ void VulkanEngine::init_vulkan()
 }
 void VulkanEngine::init_swapchain()
 {
-	create_swapchain(_windowManager.GetWindowWidth(), _windowManager.GetWindowHeight());
+	create_swapchain(_windowManager->GetWindowWidth(), _windowManager->GetWindowHeight());
 
 	// image size to fit windowSize
 	VkExtent3D drawImageExtent
 	{
-		_windowManager.GetWindowWidth(),
-		_windowManager.GetWindowHeight(),
+		_windowManager->GetWindowWidth(),
+		_windowManager->GetWindowHeight(),
 		1
 	};
 
@@ -298,7 +297,7 @@ void VulkanEngine::cleanup()
 		vkDestroyInstance(_instance, nullptr);
 
 		// destroying window
-		glfwDestroyWindow(_windowManager.GetWindowInstance());
+		glfwDestroyWindow(_windowManager->GetWindowInstance());
 		glfwTerminate();
 	}
 }
@@ -318,8 +317,8 @@ void VulkanEngine::draw()
 
 	// update uniform buffer for the next frame
 	ShaderData shaderData{};
-	glm::mat4 projection = glm::perspective(90.0f, static_cast<float>(_windowManager.GetWindowWidth()) /
-		static_cast<float>(_windowManager.GetWindowHeight()), 0.1f, 100.0f);
+	glm::mat4 projection = glm::perspective(90.0f, static_cast<float>(_windowManager->GetWindowWidth()) /
+		static_cast<float>(_windowManager->GetWindowHeight()), 0.1f, 100.0f);
 	glm::mat4 view = _camera.GetLookToMatrix();
 	glm::mat4 model = glm::mat4(1.0f);
 
@@ -382,7 +381,7 @@ void VulkanEngine::draw()
 	depthStencilAttachment.clearValue.depthStencil = { 1.0f,  0 };
 
 	VkRenderingInfo renderingInfo{ VK_STRUCTURE_TYPE_RENDERING_INFO_KHR };
-	renderingInfo.renderArea = { 0, 0, _windowManager.GetWindowWidth(), _windowManager.GetWindowHeight() };
+	renderingInfo.renderArea = { 0, 0, _windowManager->GetWindowWidth(), _windowManager->GetWindowHeight() };
 	renderingInfo.layerCount = 1;
 	renderingInfo.colorAttachmentCount = 1;
 	renderingInfo.pColorAttachments = &colorAttachment;
@@ -407,11 +406,11 @@ void VulkanEngine::draw()
 	// Start a dynamic rendering section
 	vkCmdBeginRendering(cmd, &renderingInfo);
 	// Update dynamic viewport state
-	VkViewport viewport{ 0.0f, 0.0f, (float)_windowManager.GetWindowWidth(),
-		(float)_windowManager.GetWindowHeight(), 0.0f, 1.0f };
+	VkViewport viewport{ 0.0f, 0.0f, (float)_windowManager->GetWindowWidth(),
+		(float)_windowManager->GetWindowHeight(), 0.0f, 1.0f };
 	vkCmdSetViewport(cmd, 0, 1, &viewport);
 	// Update dynamic scissor state
-	VkRect2D scissor{ 0, 0, _windowManager.GetWindowWidth(), _windowManager.GetWindowHeight() };
+	VkRect2D scissor{ 0, 0, _windowManager->GetWindowWidth(), _windowManager->GetWindowHeight() };
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
 	// Bind descriptor set for the current frame's uniform buffer, so the shader uses the data from that buffer for this draw
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_uniformBuffers[_frameNumber].descriptorSet, 0, nullptr);
@@ -482,9 +481,9 @@ void VulkanEngine::run()
 	bool minimizedWindow = false;
 
 	// Main loop
-	while (!bQuit && !glfwWindowShouldClose(_windowManager.GetWindowInstance()))
+	while (!bQuit && !glfwWindowShouldClose(_windowManager->GetWindowInstance()))
 	{
-		if (!glfwGetWindowAttrib(_windowManager.GetWindowInstance(), GLFW_MAXIMIZED))
+		if (!glfwGetWindowAttrib(_windowManager->GetWindowInstance(), GLFW_MAXIMIZED))
 		{
 			minimizedWindow = true;
 		}
@@ -502,7 +501,7 @@ void VulkanEngine::run()
 		draw();
 
 		// Check if the window should close (like pressing X button)
-		if (glfwWindowShouldClose(_windowManager.GetWindowInstance())) {
+		if (glfwWindowShouldClose(_windowManager->GetWindowInstance())) {
 			bQuit = true;
 		}
 	}
@@ -581,25 +580,33 @@ void VulkanEngine::CreatePipeline()
 	vertexInputBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 	// input attribute bindings describe shader attribute location and memory layouts
-	VkVertexInputAttributeDescription vertexInputAttributs{};
+	std::array<VkVertexInputAttributeDescription, 3>  vertexInputAttributs{};
 	// layout (location = 0) in vec3 inPos;
 	// layout (location = 1) in vec3 inColor;
 
 	// position
-	vertexInputAttributs.binding = 0;
-	vertexInputAttributs.location = 0;
+	vertexInputAttributs[0].binding = vertexInputBinding.binding;
+	vertexInputAttributs[0].location = 0;
+	vertexInputAttributs[1].binding = vertexInputBinding.binding;
+	vertexInputAttributs[1].location = 1;
+	vertexInputAttributs[2].binding = vertexInputBinding.binding;
+	vertexInputAttributs[2].location = 2;
 
 	// pos attribute is 3 32 bit signed float
-	vertexInputAttributs.format = VK_FORMAT_R32G32B32_SFLOAT;
-	vertexInputAttributs.offset = offsetof(Vertex, position);
+	vertexInputAttributs[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+	vertexInputAttributs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+	vertexInputAttributs[2].format = VK_FORMAT_R32G32_SFLOAT;
+	vertexInputAttributs[0].offset = offsetof(Vertex, position);
+	vertexInputAttributs[1].offset = offsetof(Vertex, normal);
+	vertexInputAttributs[2].offset = offsetof(Vertex, texCoord);
 
 
 	// vertex input state for pipeline creation
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCI{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 	vertexInputStateCI.vertexBindingDescriptionCount = 1;
 	vertexInputStateCI.pVertexBindingDescriptions = &vertexInputBinding;
-	vertexInputStateCI.vertexAttributeDescriptionCount = 1;
-	vertexInputStateCI.pVertexAttributeDescriptions = &vertexInputAttributs;
+	vertexInputStateCI.vertexAttributeDescriptionCount = 3;
+	vertexInputStateCI.pVertexAttributeDescriptions = vertexInputAttributs.data();
 	
 
 	// shaders
@@ -655,7 +662,7 @@ void VulkanEngine::SetupDepthStencil()
 	VkImageCreateInfo imageCI{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	imageCI.imageType = VK_IMAGE_TYPE_2D;
 	imageCI.format = _depthFormat;
-	imageCI.extent = { _windowManager.GetWindowWidth(), _windowManager.GetWindowHeight(), 1 };
+	imageCI.extent = { _windowManager->GetWindowWidth(), _windowManager->GetWindowHeight(), 1 };
 	imageCI.mipLevels = 1;
 	imageCI.arrayLayers = 1;
 	imageCI.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -750,7 +757,7 @@ void VulkanEngine::init_imgui()
 	// INITIALIZING IMGUI LIB
 	ImGui::CreateContext();
 
-	ImGui_ImplGlfw_InitForVulkan(_windowManager.GetWindowInstance(), false);
+	ImGui_ImplGlfw_InitForVulkan(_windowManager->GetWindowInstance(), false);
 
 	ImGui_ImplVulkan_InitInfo init_info{};
 	init_info.Instance = _instance;
@@ -787,30 +794,19 @@ void VulkanEngine::draw_imgui(VkCommandBuffer cmdBuffer, VkImageView targetImage
 
 void VulkanEngine::CreateVertexBuffer()
 {
-	const std::vector<Vertex> vertices{
-		{-1.0f, -1.0f, -1.0f}, // 0
-		{ 1.0f, -1.0f, -1.0f}, // 1
-		{ 1.0f,  1.0f, -1.0f}, // 2
-		{-1.0f,  1.0f, -1.0f}, // 3
-		{-1.0f, -1.0f,  1.0f}, // 4
-		{ 1.0f, -1.0f,  1.0f}, // 5
-		{ 1.0f,  1.0f,  1.0f}, // 6 
-		{-1.0f,  1.0f,  1.0f}  // 7
-	};
+	std::vector<Vertex> vertices;
+	for (const auto& x : _modelLoader.GetMeshData())
+	{
+		for (const auto& y : x.vertex)
+		{
+			vertices.emplace_back(y);
+		}
+	}
 
 	const uint32_t vertexBufferSize = static_cast<uint32_t>(vertices.size()) * sizeof(Vertex);
 
-	std::vector<uint32_t> indices{
-	 0, 1, 3, 3, 1, 2,
-	1, 5, 2, 2, 5, 6,
-	5, 4, 6, 6, 4, 7,
-	4, 0, 7, 7, 0, 3,
-	3, 2, 7, 7, 2, 6,
-	4, 5, 0, 0, 5, 1
-	};
-	indexCount = static_cast<uint32_t>(indices.size());
+	indexCount = static_cast<uint32_t>(_modelLoader.GetMeshData().data()->indices.size());
 	const uint32_t indexSize = indexCount * sizeof(uint32_t);
-
 	VkMemoryAllocateInfo memAlloc{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
 	VkMemoryRequirements memoryReqs;
 
@@ -832,10 +828,10 @@ void VulkanEngine::CreateVertexBuffer()
 	VK_CHECK(vkBindBufferMemory(_device, stagingBuffer.handle, stagingBuffer.memory, 0));
 
 	// map the data buffer and copy vertices and indices to it, so we can use a single buffer as the source for both index and vert buffers
-	uint8_t* data{ nullptr };
+	void* data{ nullptr };
 	VK_CHECK(vkMapMemory(_device, stagingBuffer.memory, 0, memAlloc.allocationSize, 0, (void**)&data));
 	memcpy(data, vertices.data(), vertexBufferSize);
-	memcpy(((char*)data) + vertexBufferSize, indices.data(), indexSize);
+	memcpy(((char*)data) + vertexBufferSize, _modelLoader.GetMeshData().data()->indices.data(), indexSize);
 
 	// create a device local buffer to which vertex data will be copied and which will be used for rendering
 	VkBufferCreateInfo vertexBufferCI{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };

@@ -8,9 +8,12 @@
 #include "vk_pipelines.h"
 #include "vk_tools.h"
 #include "window.h"
+#include "systems/camera.h"
+#include "systems/model.h"
 
 #include "../vendor/vma/vk_mem_alloc.h"
 #include "../vendor/glm/glm/glm.hpp"
+
 
 
 #include <vector>
@@ -108,10 +111,10 @@ public:
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
 private:
-
-	Window _windowManager;
-	Camera _camera;
-
+	Window* _windowManager = new Window();
+	ModelLoader _modelLoader;
+	Camera _camera{ _windowManager };
+	
 	void init_vulkan();
 	void init_swapchain();
 	void init_commands();
@@ -134,6 +137,8 @@ private:
 	struct Vertex
 	{
 		float position[3];
+		float normal[3];
+		float texCoord[2];
 	};
 
 	struct VulkanBuffer

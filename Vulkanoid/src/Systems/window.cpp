@@ -21,6 +21,21 @@ void Window::ProceedKeys(int key)
 	}
 }
 
+void Window::ProceedMouseMovement(double xPos, double yPos)
+{
+	_mouse.x = xPos - _lastMouseWidth;
+	_mouse.y = yPos - _lastMouseHeight;
+
+	_lastMouseWidth = xPos;
+	_lastMouseHeight = yPos;
+}
+
+void Window::ResetMouse()
+{
+	_mouse.x = 0.0f;
+	_mouse.y = 0.0f;
+}
+
 void Window::InitializeGLFW()
 {
 	// Initialize GLFW
@@ -44,8 +59,10 @@ void Window::InitializeGLFW()
 		glfwTerminate();
 		throw std::runtime_error("Failed to create GLFW window");
 	}
+	glfwSetWindowUserPointer(_window, this);
 
 	glfwSetKeyCallback(_window, KeyCallbackGLFW);
+	glfwSetCursorPosCallback(_window, CursorCallbackGLFW);
 }
 
 void Window::ResetKey(int key)
@@ -57,6 +74,12 @@ void Window::ResetKey(int key)
 	case GLFW_KEY_A: _keys.left = false; break;
 	case GLFW_KEY_D: _keys.right = false; break;
 	}
+}
+
+void Window::CursorCallbackGLFW(GLFWwindow* window, double xPos, double yPos)
+{
+	Window* app = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+	app->ProceedMouseMovement(xPos, yPos);
 }
 void Window::KeyCallbackGLFW(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
