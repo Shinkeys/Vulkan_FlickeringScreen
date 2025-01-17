@@ -9,7 +9,7 @@
 #include "vk_tools.h"
 #include "window.h"
 #include "systems/camera.h"
-#include "systems/model.h"
+#include "vk_mesh.h"
 
 #include "../vendor/vma/vk_mem_alloc.h"
 #include "../vendor/glm/glm/glm.hpp"
@@ -112,8 +112,8 @@ public:
 
 private:
 	Window* _windowManager = new Window();
-	ModelLoader _modelLoader;
 	Camera _camera{ _windowManager };
+	VulkanMesh _mesh;
 	
 	void init_vulkan();
 	void init_swapchain();
@@ -128,6 +128,7 @@ private:
 	// pipelines
 	void CreatePipeline();
 
+	void PassVulkanStructures();
 
 	void init_imgui();
 	void draw_imgui(VkCommandBuffer cmdBuffer, VkImageView targetImageView);
@@ -141,11 +142,6 @@ private:
 		float texCoord[2];
 	};
 
-	struct VulkanBuffer
-	{
-		VkDeviceMemory memory{ VK_NULL_HANDLE };
-		VkBuffer handle{ VK_NULL_HANDLE };
-	};
 
 
 	VulkanBuffer vertexBuffer;
@@ -175,7 +171,6 @@ private:
 	// for triangle
 	void CreateVertexBuffer();
 	VkPhysicalDeviceMemoryProperties deviceMemoryProperties{};
-	uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties);
 
 	// descriptors
 	void CreateDescriptors();

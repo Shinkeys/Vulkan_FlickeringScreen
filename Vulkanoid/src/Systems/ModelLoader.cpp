@@ -9,7 +9,7 @@ void ModelLoader::SetupModelLoader()
 }
 void ModelLoader::FillVectorOfPaths()
 {
-	std::filesystem::path model1 = "objects/models/oxygen.fbx";
+	std::filesystem::path model1 = "objects/models/blacksmith/scene.gltf";
 	_pathToModels.push_back(model1);
 }
 
@@ -25,13 +25,16 @@ void ModelLoader::LoadModel(std::filesystem::path& pathToModel)
 	}
 
 	ProcessNode(scene->mRootNode, scene);
+
 }
 
 Mesh ModelLoader::ProcessMesh(aiMesh* aiMesh, const aiScene* scene)
 {
 	Mesh mesh;
-
 	mesh.vertex.reserve(aiMesh->mNumVertices);
+
+	std::vector<Vertex> sortedVertices;
+	sortedVertices.reserve(aiMesh->mNumVertices);
 	for (uint32_t i = 0; i < aiMesh->mNumVertices; ++i)
 	{
 		Vertex vertices;
@@ -48,21 +51,26 @@ Mesh ModelLoader::ProcessMesh(aiMesh* aiMesh, const aiScene* scene)
 
 		if (aiMesh->HasNormals())
 		{
-			vertices.normal.x = aiMesh->mNormals[0].x;
-			vertices.normal.y = aiMesh->mNormals[0].y;
-			vertices.normal.z = aiMesh->mNormals[0].z;
+			vertices.normal.x = aiMesh->mNormals[i].x;
+			vertices.normal.y = aiMesh->mNormals[i].y;
+			vertices.normal.z = aiMesh->mNormals[i].z;
 		}
 		// filling data at the end
-		mesh.vertex.push_back(vertices);
+	/*	mesh.vertex.push_back(vertices);*/
+		sortedVertices.push_back(vertices);
 	}
 	
 	mesh.indices.reserve(aiMesh->mNumFaces);
+	static uint32_t offset = 0;
 	for (uint32_t i = 0; i < aiMesh->mNumFaces; ++i)
 	{
 		aiFace face = aiMesh->mFaces[i];
 		for (uint32_t j = 0; j < face.mNumIndices; ++j)
 		{
-			mesh.indices.push_back(face.mIndices[j]);
+			mesh.indices.push_back(offset);
+			mesh.vertex.push_back(sortedVertices[face.mIndices[j]]);
+
+			++offset;
 		}
 	}
 

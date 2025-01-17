@@ -21,4 +21,5 @@ struct Mesh
 {
 	std::vector<Vertex> vertex;
 	std::vector<uint32_t> indices;
+	std::vector<Texture> textures;
 };

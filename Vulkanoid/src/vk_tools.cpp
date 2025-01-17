@@ -24,3 +24,20 @@ VkBool32 vktool::GetSupportedDepthFormat(VkPhysicalDevice physDevice, VkFormat* 
 
 	return false;
 }
+
+// request device memory type that support all the property flags we need
+uint32_t vktool::GetMemoryTypeIndex(VkPhysicalDeviceMemoryProperties memoryProps, uint32_t typeBits, VkMemoryPropertyFlags properties)
+{
+	for (uint32_t i = 0; i < memoryProps.memoryTypeCount; ++i)
+	{
+		if ((typeBits & 1) == 1)
+		{
+			if ((memoryProps.memoryTypes[i].propertyFlags & properties) == properties)
+			{
+				return i;
+			}
+		}
+		typeBits >>= 1;
+	}
+	throw "Unable to find a suitable memory type";
+}

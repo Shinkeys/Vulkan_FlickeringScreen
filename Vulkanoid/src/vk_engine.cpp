@@ -28,11 +28,13 @@ void VulkanEngine::init()
 
 	init_vulkan();
 
+
 	init_swapchain();
 	init_commands();
 
 	init_sync_structures();
 
+	PassVulkanStructures();
 	CreateVertexBuffer();
 
 	CreateUniformBuffers();
@@ -46,6 +48,11 @@ void VulkanEngine::init()
 
 	// Everything went fine
 	_isInitialized = true;
+}
+
+void VulkanEngine::PassVulkanStructures()
+{
+	_mesh.SetVulkanStructures(_device, _chosenDevice, _immediate._immediateCommandPool, _graphicsQueue);
 }
 
 void VulkanEngine::init_vulkan()
@@ -117,6 +124,7 @@ void VulkanEngine::init_vulkan()
 	allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 
 	vmaCreateAllocator(&allocatorInfo, &_allocator);
+
 
 }
 void VulkanEngine::init_swapchain()
@@ -321,6 +329,7 @@ void VulkanEngine::draw()
 		static_cast<float>(_windowManager->GetWindowHeight()), 0.1f, 100.0f);
 	glm::mat4 view = _camera.GetLookToMatrix();
 	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::scale(model, glm::vec3(0.1f));
 
 	shaderData.projMatrix = projection;
 	shaderData.viewMatrix = view;
@@ -418,11 +427,12 @@ void VulkanEngine::draw()
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 	// Bind triangle vertex buffer (contains position and colors)
 	VkDeviceSize offsets[1]{ 0 };
-	vkCmdBindVertexBuffers(cmd, 0, 1, &vertexBuffer.handle, offsets);
+	vkCmdBindVertexBuffers(cmd, 0, 1, &_mesh.GetBuffers().vertices.handle, offsets);
 	// Bind triangle index buffer
-	vkCmdBindIndexBuffer(cmd, indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindIndexBuffer(cmd, _mesh.GetBuffers().indices.handle, 0, VK_INDEX_TYPE_UINT32);
 	// Draw indexed triangle
-	vkCmdDrawIndexed(cmd, indexCount, 1, 0, 0, 0);
+	vkCmdDrawIndexed(cmd, _mesh.GetIndicesCount(), 1, 0, 0, 0);
+	//vkCmdDraw(cmd, _mesh.GetVerticesCount(), 1, 0, 0);
 	// Finish the current dynamic rendering section
 	vkCmdEndRendering(cmd);
 
@@ -472,7 +482,7 @@ void VulkanEngine::draw()
 	//increase the number of frames drawn
 	_frameNumber = (_frameNumber + 1) % MAX_CONCURRENT_FRAMES;
 		
-	
+	/*throw std::runtime_error("done");*/
 }
 
 void VulkanEngine::run()
@@ -676,7 +686,7 @@ void VulkanEngine::SetupDepthStencil()
 	VkMemoryRequirements memReqs;
 	vkGetImageMemoryRequirements(_device, _depthStencil.image, &memReqs);
 	memAlloc.allocationSize = memReqs.size;
-	memAlloc.memoryTypeIndex = GetMemoryTypeIndex(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	memAlloc.memoryTypeIndex = vktool::GetMemoryTypeIndex(deviceMemoryProperties, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VK_CHECK(vkAllocateMemory(_device, &memAlloc, nullptr, &_depthStencil.memory));
 	VK_CHECK(vkBindImageMemory(_device, _depthStencil.image, _depthStencil.memory, 0));
 
@@ -794,110 +804,7 @@ void VulkanEngine::draw_imgui(VkCommandBuffer cmdBuffer, VkImageView targetImage
 
 void VulkanEngine::CreateVertexBuffer()
 {
-	std::vector<Vertex> vertices;
-	for (const auto& x : _modelLoader.GetMeshData())
-	{
-		for (const auto& y : x.vertex)
-		{
-			vertices.emplace_back(y);
-		}
-	}
-
-	const uint32_t vertexBufferSize = static_cast<uint32_t>(vertices.size()) * sizeof(Vertex);
-
-	indexCount = static_cast<uint32_t>(_modelLoader.GetMeshData().data()->indices.size());
-	const uint32_t indexSize = indexCount * sizeof(uint32_t);
-	VkMemoryAllocateInfo memAlloc{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-	VkMemoryRequirements memoryReqs;
-
-	// to effectively access it on the gpu better to use staging buffer(basically intermediate memory)
-	VulkanBuffer stagingBuffer;
-	VkBufferCreateInfo stagingBufferCI{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-	stagingBufferCI.size = indexSize + vertexBufferSize;
-	// using buffer as copy SOURCE
-	stagingBufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-	// creating host visible buffer to copy the vertex data to staging buff
-	VK_CHECK(vkCreateBuffer(_device, &stagingBufferCI, nullptr, &stagingBuffer.handle));
-	vkGetBufferMemoryRequirements(_device, stagingBuffer.handle, &memoryReqs);
-	memAlloc.allocationSize = memoryReqs.size;
-
-	// request a host visible memory type that can be used to copy to
-	memAlloc.memoryTypeIndex = GetMemoryTypeIndex(memoryReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	VK_CHECK(vkAllocateMemory(_device, &memAlloc, nullptr, &stagingBuffer.memory));
-	VK_CHECK(vkBindBufferMemory(_device, stagingBuffer.handle, stagingBuffer.memory, 0));
-
-	// map the data buffer and copy vertices and indices to it, so we can use a single buffer as the source for both index and vert buffers
-	void* data{ nullptr };
-	VK_CHECK(vkMapMemory(_device, stagingBuffer.memory, 0, memAlloc.allocationSize, 0, (void**)&data));
-	memcpy(data, vertices.data(), vertexBufferSize);
-	memcpy(((char*)data) + vertexBufferSize, _modelLoader.GetMeshData().data()->indices.data(), indexSize);
-
-	// create a device local buffer to which vertex data will be copied and which will be used for rendering
-	VkBufferCreateInfo vertexBufferCI{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-	vertexBufferCI.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-	vertexBufferCI.size = vertexBufferSize;
-	VK_CHECK(vkCreateBuffer(_device, &vertexBufferCI, nullptr, &vertexBuffer.handle));
-	vkGetBufferMemoryRequirements(_device, vertexBuffer.handle, &memoryReqs);
-	memAlloc.allocationSize = memoryReqs.size;
-	memAlloc.memoryTypeIndex = GetMemoryTypeIndex(memoryReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VK_CHECK(vkAllocateMemory(_device, &memAlloc, nullptr, &vertexBuffer.memory));
-	VK_CHECK(vkBindBufferMemory(_device, vertexBuffer.handle, vertexBuffer.memory, 0));
-
-	// the same for indices
-	VkBufferCreateInfo indexBufferCI{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-	indexBufferCI.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-	indexBufferCI.size = indexSize;
-	VK_CHECK(vkCreateBuffer(_device, &indexBufferCI, nullptr, &indexBuffer.handle));
-	vkGetBufferMemoryRequirements(_device, indexBuffer.handle, &memoryReqs);
-	memAlloc.allocationSize = memoryReqs.size;
-	memAlloc.memoryTypeIndex = GetMemoryTypeIndex(memoryReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VK_CHECK(vkAllocateMemory(_device, &memAlloc, nullptr, &indexBuffer.memory));
-	VK_CHECK(vkBindBufferMemory(_device, indexBuffer.handle, indexBuffer.memory, 0));
-
-	// need to submit copies to a queue, so create cmd buffer for em
-	VkCommandBuffer copyCmd;
-
-	VkCommandBufferAllocateInfo cmdAllocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-	cmdAllocInfo.commandPool = _immediate._immediateCommandPool;
-	cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	cmdAllocInfo.commandBufferCount = 1;
-	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &copyCmd));
-
-	VkCommandBufferBeginInfo cmdBufBeginInfo = vkinit::command_buffer_begin_info();
-	VK_CHECK(vkBeginCommandBuffer(copyCmd, &cmdBufBeginInfo));
-
-	// copying vertex and index buffers to the device
-	VkBufferCopy copyRegion{};
-	copyRegion.size = vertexBufferSize;
-	vkCmdCopyBuffer(copyCmd, stagingBuffer.handle, vertexBuffer.handle, 1, &copyRegion);
-	copyRegion.size = indexSize;
-
-	// offset
-	copyRegion.srcOffset = vertexBufferSize;
-	vkCmdCopyBuffer(copyCmd, stagingBuffer.handle, indexBuffer.handle, 1, &copyRegion);
-	VK_CHECK(vkEndCommandBuffer(copyCmd));
-
-	// submit cmd buffer to queue
-	VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &copyCmd;
-
-	VkFenceCreateInfo fenceCI{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-	VkFence fence;
-	VK_CHECK(vkCreateFence(_device, &fenceCI, nullptr, &fence));
-	// submit copies to the queue
-	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, fence));
-
-	// wait for the fence to signal that command buffer has finished execution
-	VK_CHECK(vkWaitForFences(_device, 1, &fence, VK_TRUE, DEFAULT_FENCE_TIMEOUT));
-	vkDestroyFence(_device, fence, nullptr);
-	vkFreeCommandBuffers(_device, _immediate._immediateCommandPool, 1, &copyCmd);
-
-	// safely delete the staging buffer
-	vkDestroyBuffer(_device, stagingBuffer.handle, nullptr);
-	vkFreeMemory(_device, stagingBuffer.memory, nullptr);
-
+	_mesh.SetupBuffers();
 }
 
 void VulkanEngine::CreateUniformBuffers()
@@ -918,7 +825,7 @@ void VulkanEngine::CreateUniformBuffers()
 		allocInfo.allocationSize = memReqs.size;
 
 		// buffer would be coherent, so dont need to flush every update
-		allocInfo.memoryTypeIndex = GetMemoryTypeIndex(memReqs.memoryTypeBits, 
+		allocInfo.memoryTypeIndex = vktool::GetMemoryTypeIndex(deviceMemoryProperties, memReqs.memoryTypeBits, 
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 		// allocate memory for the uni buff
@@ -994,19 +901,3 @@ void VulkanEngine::CreateDescriptors()
 
 }
 
-// request device memory type that support all the property flags we need
-uint32_t VulkanEngine::GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties)
-{
-	for (uint32_t i = 0; i < deviceMemoryProperties.memoryTypeCount; ++i)
-	{
-		if ((typeBits & 1) == 1)
-		{
-			if ((deviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
-			{
-				return i;
-			}
-		}
-		typeBits >>= 1;
-	}
-	throw "Unable to find a suitable memory type";
-}

@@ -9,6 +9,13 @@
 #include <iostream>
 
 //we will add our main reusable types here
+
+struct VulkanBuffer
+{
+	VkDeviceMemory memory{ VK_NULL_HANDLE };
+	VkBuffer handle{ VK_NULL_HANDLE };
+};
+
 struct AllocatedImage
 {
 	VkImage image;
