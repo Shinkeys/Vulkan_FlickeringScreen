@@ -9,7 +9,7 @@ namespace vkinit
 {
 	VkCommandPoolCreateInfo command_pool_create_info(uint32_t queueFamilyIndex,
 		VkCommandPoolCreateFlags flags = 0);
-	VkCommandBufferAllocateInfo command_buffer_allocate_info(
+	VkCommandBufferAllocateInfo CommandBufferAllocateInfo(
 		VkCommandPool pool, uint32_t count = 1);
 
 	VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0);
@@ -26,8 +26,8 @@ namespace vkinit
 		VkSemaphoreSubmitInfo* waitSemaphoreInfo);
 
 	// image creation
-	VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent);
-	VkImageViewCreateInfo imageview_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspectFlags);
+	VkImageCreateInfo ImageCreateInfo(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent);
+	VkImageViewCreateInfo ImageViewCreateInfo(VkFormat format, VkImage image, VkImageAspectFlags aspectFlags);
 
 	// for imgui
 	VkRenderingAttachmentInfo attachment_info(

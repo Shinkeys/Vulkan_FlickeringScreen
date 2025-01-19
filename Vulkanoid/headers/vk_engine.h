@@ -12,7 +12,6 @@
 #include "vk_mesh.h"
 
 #include "../vendor/vma/vk_mem_alloc.h"
-#include "../vendor/glm/glm/glm.hpp"
 
 
 
@@ -45,7 +44,6 @@ struct ImmediateData
 };
 
 
-constexpr unsigned int MAX_CONCURRENT_FRAMES = 2;
 
 class VulkanEngine {
 public:
@@ -124,7 +122,6 @@ private:
 	void create_swapchain(uint32_t width, uint32_t height);
 	void destroy_swapchain();
 
-
 	// pipelines
 	void CreatePipeline();
 
@@ -148,37 +145,18 @@ private:
 	VulkanBuffer indexBuffer;
 	uint32_t indexCount;
 
-	// uniform buffer block object
-	struct UniformBuffer : VulkanBuffer
-	{
-		// descriptor set stores the resources bound to the binding points in shader
-		VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
-
-		uint8_t* mapped{ nullptr };
-	};
-
 	// one ubo per frame, so we can have overframe overlap to be sure uniforms arent updated while still in use
 	std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> _uniformBuffers;
 
-
-	struct ShaderData
-	{
-		glm::mat4 modelMatrix;
-		glm::mat4 viewMatrix;
-		glm::mat4 projMatrix;
-	};
 
 	// for triangle
 	void CreateVertexBuffer();
 	VkPhysicalDeviceMemoryProperties deviceMemoryProperties{};
 
-	// descriptors
-	void CreateDescriptors();
 	//Descriptors
-	DescriptorAllocator globalDescriptorAllocator;
+	Descriptor globalDescriptor;
 	VkDescriptorSet _drawImageDescriptors;
 	VkDescriptorPool _descriptorPool;
 	VkDescriptorSetLayout _drawImageDescriptorLayout;
-	void CreateUniformBuffers();
 	void CleanBuffers();
 };

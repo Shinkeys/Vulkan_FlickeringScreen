@@ -3,7 +3,6 @@
 #include <GLFW/glfw3.h>
 
 #include "../vendor/vk-bootstrap/src/VkBootstrap.h"
-#include "../headers/vk_images.h"
 #include "../headers/vk_types.h"
 #include "../headers/vk_initializers.h"
 #include "../headers/vk_pipelines.h"
@@ -22,6 +21,13 @@
 constexpr bool bUseValidationLayers{ true };
 
 
+
+
+void CreateLogicalDevice(VkDevice device)
+{
+
+}
+
 void VulkanEngine::init()
 {
 	_windowManager->InitializeGLFW();
@@ -36,10 +42,6 @@ void VulkanEngine::init()
 
 	PassVulkanStructures();
 	CreateVertexBuffer();
-
-	CreateUniformBuffers();
-
-	CreateDescriptors();
 	
 	CreatePipeline();
 
@@ -77,13 +79,16 @@ void VulkanEngine::init_vulkan()
 	
 	// enabling features from vk 1.3
 	VkPhysicalDeviceVulkan13Features features{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
-	features.dynamicRendering = true;
-	features.synchronization2 = true;
-	
+	features.dynamicRendering = VK_TRUE;
+	features.synchronization2 = VK_TRUE;
 	// enabling features from vk 1.2
 	VkPhysicalDeviceVulkan12Features features12{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-	features12.bufferDeviceAddress = true;
-	features12.descriptorIndexing = true;
+	features12.bufferDeviceAddress = VK_TRUE;
+	features12.descriptorIndexing = VK_TRUE;
+	// bindless
+	features12.descriptorBindingPartiallyBound = VK_TRUE;
+	features12.runtimeDescriptorArray = VK_TRUE;
+	features12.descriptorIndexing = VK_TRUE;
 
 
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
@@ -149,7 +154,7 @@ void VulkanEngine::init_swapchain()
 	drawImageUsageFlags |= VK_IMAGE_USAGE_STORAGE_BIT;
 	drawImageUsageFlags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-	VkImageCreateInfo rimg_info{ vkinit::image_create_info(_drawImage.imageFormat,
+	VkImageCreateInfo rimg_info{ vkinit::ImageCreateInfo(_drawImage.imageFormat,
 		drawImageUsageFlags, drawImageExtent) };
 
 	// allocating image from gpu local memory
@@ -161,7 +166,7 @@ void VulkanEngine::init_swapchain()
 	vmaCreateImage(_allocator, &rimg_info, &rimg_allocationInfo, &_drawImage.image, &_drawImage.allocation, nullptr);
 
 	// image view for the draw to use for rendering
-	VkImageViewCreateInfo rview_info = vkinit::imageview_create_info(_drawImage.imageFormat,
+	VkImageViewCreateInfo rview_info = vkinit::ImageViewCreateInfo(_drawImage.imageFormat,
 		_drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
 
 	VK_CHECK(vkCreateImageView(_device, &rview_info, nullptr, &_drawImage.imageView));
@@ -178,7 +183,7 @@ void VulkanEngine::init_commands()
 		VK_CHECK(vkCreateCommandPool(_device, &commandPoolInfo, nullptr, &_frames[i]._commandPool));
 
 		// allocate the default command buffer that will be used for render
-		VkCommandBufferAllocateInfo cmdAllocInfo{ vkinit::command_buffer_allocate_info(_frames[i]._commandPool, 1) };
+		VkCommandBufferAllocateInfo cmdAllocInfo{ vkinit::CommandBufferAllocateInfo(_frames[i]._commandPool, 1) };
 
 
 		VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &_frames[i]._mainCommandBuffer));
@@ -187,7 +192,7 @@ void VulkanEngine::init_commands()
 	VK_CHECK(vkCreateCommandPool(_device, &commandPoolInfo, nullptr, &_immediate._immediateCommandPool));
 
 	// allocating buffer for immediate submits
-	VkCommandBufferAllocateInfo cmdAllocInfo{ vkinit::command_buffer_allocate_info(_immediate._immediateCommandPool, 1) };
+	VkCommandBufferAllocateInfo cmdAllocInfo{ vkinit::CommandBufferAllocateInfo(_immediate._immediateCommandPool, 1) };
 
 	VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &_immediate._immediateCommandBuffer));
 
@@ -255,7 +260,7 @@ void VulkanEngine::destroy_swapchain()
 void VulkanEngine::CleanBuffers()
 {
 	vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
-	vkDestroyDescriptorPool(_device, globalDescriptorAllocator.pool, nullptr);
+	vkDestroyDescriptorPool(_device, globalDescriptor._pool, nullptr);
 	for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
 	{
 		vkDestroyBuffer(_device, _uniformBuffers[i].handle, nullptr);
@@ -355,19 +360,19 @@ void VulkanEngine::draw()
 	//_drawExtent.height = _drawImage.imageExtent.height;
 
 	//// with dynamic rendering need to explicitly add layout transition by using barries
-	//vkutil::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+	//vkutil::TransitionImage(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
 	////draw_background(cmd);
-	/*vkutil::transition_image(cmd, _drawImage.image, 
+	/*vkutil::TransitionImage(cmd, _drawImage.image, 
 		VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);*/
 	
 
 	// transition img and swapchain img into correct  transfer layouts
-	vkutil::transition_image(cmd, _swapchainImages[imageIndex], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+	vkutil::TransitionImage(cmd, _swapchainImages[imageIndex], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 	// transition image for depth
-	vkutil::transition_image(cmd, _depthStencil.image, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+	vkutil::TransitionImage(cmd, _depthStencil.image, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
 		| VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 
 		VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, 
@@ -438,7 +443,7 @@ void VulkanEngine::draw()
 
 
 	// setting swapchain image layout to present
-	vkutil::transition_image(cmd, _swapchainImages[imageIndex],
+	vkutil::TransitionImage(cmd, _swapchainImages[imageIndex],
 		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
 		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
@@ -807,97 +812,6 @@ void VulkanEngine::CreateVertexBuffer()
 	_mesh.SetupBuffers();
 }
 
-void VulkanEngine::CreateUniformBuffers()
-{
-	VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-	bufferInfo.size = sizeof(ShaderData);
-	bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-	// create the buffers
-	for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
-	{
-		VK_CHECK(vkCreateBuffer(_device, &bufferInfo, nullptr, &_uniformBuffers[i].handle));
-
-		// get memory requirements 
-		VkMemoryRequirements memReqs;
-		vkGetBufferMemoryRequirements(_device, _uniformBuffers[i].handle, &memReqs);
-		VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-		allocInfo.allocationSize = memReqs.size;
-
-		// buffer would be coherent, so dont need to flush every update
-		allocInfo.memoryTypeIndex = vktool::GetMemoryTypeIndex(deviceMemoryProperties, memReqs.memoryTypeBits, 
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-		// allocate memory for the uni buff
-		VK_CHECK(vkAllocateMemory(_device, &allocInfo, nullptr, &_uniformBuffers[i].memory));
-
-		// bind memory to buff
-		VK_CHECK(vkBindBufferMemory(_device,
-			_uniformBuffers[i].handle, _uniformBuffers[i].memory, 0));
-
-		// map buffer once, so can update it without having to map again
-		VK_CHECK(vkMapMemory(_device, _uniformBuffers[i].memory,
-			0, sizeof(ShaderData), 0, (void**)&_uniformBuffers[i].mapped));
-	}
-}
-
-void VulkanEngine::CreateDescriptors()
-{
-	VkDescriptorPoolSize descriptorTypeCounts[1]{};
-
-	// we use only one desc(uniform buffer)
-	descriptorTypeCounts[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	descriptorTypeCounts[0].descriptorCount = MAX_CONCURRENT_FRAMES;
-
-	VkDescriptorPoolCreateInfo descriptorPoolCI{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-	descriptorPoolCI.poolSizeCount = 1;
-	descriptorPoolCI.pPoolSizes = descriptorTypeCounts;
-
-	// set max number of descriptor sets that can be requested from this pool
-	descriptorPoolCI.maxSets = MAX_CONCURRENT_FRAMES;
-	VK_CHECK(vkCreateDescriptorPool(_device, &descriptorPoolCI, nullptr, &_descriptorPool));
-
-	// define interface between application and shader
-	// connect different shader stages to descriptors for binding uniform buffers
-	VkDescriptorSetLayoutBinding layoutBinding{};
-	layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	layoutBinding.descriptorCount = 1;
-	layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-	VkDescriptorSetLayoutCreateInfo descriptorLayoutCI{
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
-	};
-	descriptorLayoutCI.bindingCount = 1;
-	descriptorLayoutCI.pBindings = &layoutBinding;
-
-	VK_CHECK(vkCreateDescriptorSetLayout(_device, &descriptorLayoutCI, nullptr, &_drawImageDescriptorLayout));
 
 
-	for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
-	{
-		VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-		allocInfo.descriptorPool = _descriptorPool;
-		allocInfo.descriptorSetCount = 1;
-		allocInfo.pSetLayouts = &_drawImageDescriptorLayout;
-		VK_CHECK(vkAllocateDescriptorSets(_device, &allocInfo, &_uniformBuffers[i].descriptorSet));
-
-		// update descriptor set determining the shader binding points
-		// for every binding point used in a shader there needs to be one
-		// desc matching that binding point
-		VkWriteDescriptorSet writeDescSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = _uniformBuffers[i].handle;
-		bufferInfo.range = sizeof(ShaderData);
-
-		// binding 0 - ubo
-		writeDescSet.dstSet = _uniformBuffers[i].descriptorSet;
-		writeDescSet.descriptorCount = 1;
-		writeDescSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		writeDescSet.pBufferInfo = &bufferInfo;
-		writeDescSet.dstBinding = 0;
-		vkUpdateDescriptorSets(_device, 1, &writeDescSet, 0, VK_NULL_HANDLE);
-	}
-
-}
 

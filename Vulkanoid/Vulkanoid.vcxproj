@@ -115,7 +115,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>vendor\GLFW\include;vendor\glad\include;vendor\glm;vendor\assimp\include;C:\VulkanSDK\1.3.296.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>vendor\GLFW\include;vendor\glad\include;vendor\glm;vendor\assimp\include;C:\VulkanSDK\1.3.296.0\Include;vendor\stb_image\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile />
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -164,7 +164,6 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\vk_descriptor.cpp" />
     <ClCompile Include="src\vk_engine.cpp" />
-    <ClCompile Include="src\vk_images.cpp" />
     <ClCompile Include="src\vk_initializers.cpp" />
     <ClCompile Include="src\vk_pipeline.cpp" />
     <ClCompile Include="vendor\imgui\imgui.cpp" />
@@ -184,7 +183,6 @@
     <ClInclude Include="headers\window.h" />
     <ClInclude Include="headers\vk_descriptor.h" />
     <ClInclude Include="headers\vk_engine.h" />
-    <ClInclude Include="headers\vk_images.h" />
     <ClInclude Include="headers\vk_initializers.h" />
     <ClInclude Include="headers\vk_pipelines.h" />
     <ClInclude Include="headers\vk_tools.h" />

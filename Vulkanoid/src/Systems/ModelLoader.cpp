@@ -55,8 +55,6 @@ Mesh ModelLoader::ProcessMesh(aiMesh* aiMesh, const aiScene* scene)
 			vertices.normal.y = aiMesh->mNormals[i].y;
 			vertices.normal.z = aiMesh->mNormals[i].z;
 		}
-		// filling data at the end
-	/*	mesh.vertex.push_back(vertices);*/
 		sortedVertices.push_back(vertices);
 	}
 	
@@ -75,13 +73,52 @@ Mesh ModelLoader::ProcessMesh(aiMesh* aiMesh, const aiScene* scene)
 	}
 
 	
-	/*if (aiMesh->mMaterialIndex >= 0)
+	if (aiMesh->mMaterialIndex >= 0)
 	{
 		aiMaterial* material = scene->mMaterials[aiMesh->mMaterialIndex];
-	}*/
+		std::array<aiTextureType, 4> textureTypes
+		{
+			aiTextureType_DIFFUSE,
+			aiTextureType_SPECULAR,
+			aiTextureType_EMISSIVE,
+			aiTextureType_HEIGHT
+		};
 
-	return Mesh(mesh);
+		mesh.textures = ProcessMaterial(material, textureTypes);
+	}
+
+	return mesh;
 }
+
+Texture ModelLoader::ProcessMaterial(aiMaterial* material, std::array<aiTextureType, 4> textureTypes)
+{
+	Texture textures{};
+	// need it when loading a lot of models, for example 10 models
+	// id should be unique for every texture
+	static uint32_t offset = 0;
+	for (uint32_t i = 0; i < textureTypes.size(); ++i)
+	{
+		const uint32_t currentTextureCount = material->GetTextureCount(textureTypes[i]);
+		for (uint32_t j = 0; j < currentTextureCount; ++j)
+		{
+			aiString str;
+			// to replace index later
+			material->GetTexture(textureTypes[i], j, &str);
+			switch (textureTypes[i])
+			{
+			case aiTextureType_DIFFUSE: textures.diffuse_id = j + offset; textures.diffuse_path = str; break;
+			case aiTextureType_SPECULAR: textures.specular_id = j + offset; textures.specular_path = str; break;
+			case aiTextureType_EMISSIVE: textures.emissive_id = j + offset; textures.emissive_path = str; break;
+			case aiTextureType_HEIGHT: textures.normal_id = j + offset; textures.normal_path = str; break;
+			}
+
+		}
+		offset += static_cast<uint32_t>(currentTextureCount);
+	}
+
+	return textures;
+}
+
 
 void ModelLoader::ProcessNode(aiNode* node, const aiScene* scene)
 {

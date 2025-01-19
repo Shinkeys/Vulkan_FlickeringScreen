@@ -27,9 +27,6 @@
     <ClCompile Include="vendor\vk-bootstrap\src\VkBootstrap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\vk_images.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\vk_descriptor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -57,9 +54,6 @@
     <ClCompile Include="vendor\imgui\imgui_demo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="precompiled\stdafx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\vk_tools.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -72,6 +66,9 @@
     <ClCompile Include="src\Systems\ModelLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\vk_mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\vk_engine.h">
@@ -81,9 +78,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="headers\vk_initializers.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="headers\vk_images.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="headers\vk_descriptor.h">
@@ -144,6 +138,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="headers\systems\VertexTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\vk_mesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

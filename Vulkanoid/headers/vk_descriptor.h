@@ -5,33 +5,34 @@
 #include <vector>
 #include <span>
 
-class DescriptorLayoutBuilder
+
+
+class Descriptor
 {
-private:
+private:	
+	VkDevice _device;
 
 
+
+
+	// to do it later 
+	const uint32_t maxBindlessResources = 16536;
+
+
+	void CreateDescriptorSetLayout(VkDescriptorType descType,
+		VkShaderStageFlags flags, uint32_t descriptorCount = 1 /* 1 */);
+	void AllocatePool();
+	VkDescriptorSet AllocateSet(VkDescriptorSetLayout layout);
+	void UpdateShaderBindingPoints(VulkanBuffer buffer, VkDescriptorSet dstSet);
+	VkDescriptorSet AllocateBindlessSet(VkDescriptorSetLayout layout);
+	void CreateBindlessDescriptorLayout();
 public:
-	std::vector<VkDescriptorSetLayoutBinding> bindings;
+	Descriptor(VkDevice device) : _device{ device }
+	{
 
-	void add_binding(uint32_t binding, VkDescriptorType type);
-	void clear();
-
-	VkDescriptorSetLayout build(VkDevice device, VkShaderStageFlags shaderStageFlags,
-		void* pNext = nullptr, VkDescriptorSetLayoutCreateFlags flags = 0);
-};
-
-class DescriptorAllocator
-{
-private:
-
-public:
-
-	VkDescriptorPool pool;
-
-	void clear_pool(VkDevice device);
-	void destroy_pool(VkDevice device);
-
-	VkDescriptorSet allocate(VkDevice device, VkDescriptorSetLayout layout);
-
-
+	}
+	VkDescriptorPool _pool;
+	VkDescriptorSetLayout _setLayout;
+	void ClearPool();
+	void DestroyPool();
 };
