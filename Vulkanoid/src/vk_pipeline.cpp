@@ -291,4 +291,27 @@ std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> vkutil::CreateUniformBuffers(Vk
 		VK_CHECK(vkMapMemory(device, uniformBuffer[i].memory,
 			0, sizeof(ShaderData), 0, (void**)&uniformBuffer[i].mapped));
 	}
+
+	return uniformBuffer;
+}
+
+VkSampler vkutil::CreateSampler(VkDevice device)
+{
+	VkSamplerCreateInfo samplerInfo{};
+	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter = VK_FILTER_LINEAR;
+	samplerInfo.minFilter = VK_FILTER_LINEAR;
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.minLod = 0.0f;
+	samplerInfo.maxLod = 16.0f;
+
+
+	VkSampler sampler;
+
+	VK_CHECK(vkCreateSampler(device, &samplerInfo, nullptr, &sampler));
+
+	return sampler;
 }

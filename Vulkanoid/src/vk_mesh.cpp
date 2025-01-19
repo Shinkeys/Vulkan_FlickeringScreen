@@ -4,13 +4,16 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-void VulkanMesh::SetVulkanStructures(VkDevice device, 
+void VulkanMesh::SetStructures(VkDevice device,
 	VkPhysicalDevice physDevice, VkCommandPool commandPool, VkQueue queue)
 {
 	this->_device = device;
 	this->_physicalDevice = physDevice;
 	this->_commandPool = commandPool;
 	this->_queue = queue;
+
+	SetupMeshData();
+	_sampler = vkutil::CreateSampler(_device);
 }
 
 void VulkanMesh::SetupMeshData()
@@ -29,6 +32,8 @@ void VulkanMesh::SetupMeshData()
 		_indices.insert(_indices.end(), std::make_move_iterator(model.GetMeshData()[i].indices.begin()),
 			std::make_move_iterator(model.GetMeshData()[i].indices.end()));
 
+		_currentMeshSize.push_back(static_cast<uint32_t>(
+			model.GetMeshData()[i].indices.size()));
 		
 		Texture currentTexture = model.GetMeshData()[i].textures;
 		_textures.push_back(StbiLoadTexture((currentTexture.diffuse_path.C_Str())));
@@ -92,6 +97,8 @@ VulkanImage VulkanMesh::StbiLoadTexture(const char* fileName)
 			VK_IMAGE_ASPECT_COLOR_BIT);
 
 		vkCreateImageView(_device, &viewInfo, nullptr, &image.view);
+
+		
 	}
 
 	if (image.handle != VK_NULL_HANDLE)
@@ -101,28 +108,26 @@ VulkanImage VulkanMesh::StbiLoadTexture(const char* fileName)
 	else return {};
 }
 
-void VulkanMesh::DrawMeshes(VkCommandBuffer cmd, VkPipelineLayout pipelineLayout)
+void VulkanMesh::DrawMeshes(VkCommandBuffer cmd)
 {
 	for (uint32_t i = 0; i < _meshCount; ++i)
 	{
-
+		const uint32_t indicesToDraw = static_cast<uint32_t>(_currentMeshSize[i]);
+		Draw(cmd, indicesToDraw);
 	}
 }
 
-void VulkanMesh::Draw(VkCommandBuffer cmd, VkPipelineLayout pipelineLayout)
+void VulkanMesh::Draw(VkCommandBuffer cmd, uint32_t indicesCount)
 {
-	//vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &_uniformBuffers[_frameNumber].descriptorSet, 0, nullptr);
-	//// The pipeline (state object) contains all states of the rendering pipeline, binding it will set all the states specified at pipeline creation time
-	//vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
-	//// Bind triangle vertex buffer (contains position and colors)
-	//VkDeviceSize offsets[1]{ 0 };
-	//vkCmdBindVertexBuffers(cmd, 0, 1, &_meshBuffer.vertices.handle, offsets);
-	//// Bind triangle index buffer
-	//vkCmdBindIndexBuffer(cmd, _meshBuffer.indices.handle, 0, VK_INDEX_TYPE_UINT32);
-	//// Draw indexed triangle
+	VkDeviceSize offsets[1]{ 0 };
+	vkCmdBindVertexBuffers(cmd, 0, 1, &_meshBuffer.vertices.handle, offsets);
+	// Bind triangle index buffer
+	vkCmdBindIndexBuffer(cmd, _meshBuffer.indices.handle, 0, VK_INDEX_TYPE_UINT32);
+	// Draw indexed triangle
+	vkCmdDrawIndexed(cmd, indicesCount, 1, 0, 0, 0);
 }
 
-void VulkanMesh::SetupBuffers()
+void VulkanMesh::CreateBuffers()
 {
 	CreateVertexBuffer();
 	CreateIndexBuffer();
@@ -194,4 +199,6 @@ void VulkanMesh::Cleanup()
 		vkDestroyImage(_device, _textures[i].handle, nullptr);
 		vkFreeMemory(_device, _textures[i].memory, nullptr);
 	}
+
+	vkDestroySampler(_device, _sampler, nullptr);
 }

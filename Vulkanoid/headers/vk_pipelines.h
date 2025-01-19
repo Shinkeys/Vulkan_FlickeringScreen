@@ -24,7 +24,7 @@ namespace vkutil
 
 	void CopyBuffer(VkDevice device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool cmdPool, VkQueue queue);
 
-
+	VkSampler CreateSampler(VkDevice device);
 
 	void SubmitToQueue(VkDevice device, VkQueue queue, VkCommandPool cmdPool, VkCommandBuffer commandBuffer);
 

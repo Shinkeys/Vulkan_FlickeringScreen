@@ -49,7 +49,6 @@ class VulkanEngine {
 public:
 	// window settings
 	bool _isInitialized{ false };
-	int _frameNumber{ 0 };
 
 
 	//initializes everything in the engine
@@ -139,10 +138,8 @@ private:
 		float texCoord[2];
 	};
 
+	Descriptor _globalDescriptor;
 
-
-	VulkanBuffer vertexBuffer;
-	VulkanBuffer indexBuffer;
 	uint32_t indexCount;
 
 	// one ubo per frame, so we can have overframe overlap to be sure uniforms arent updated while still in use
@@ -150,13 +147,10 @@ private:
 
 
 	// for triangle
-	void CreateVertexBuffer();
+	void SetupExternalVulkanStructures();
 	VkPhysicalDeviceMemoryProperties deviceMemoryProperties{};
 
-	//Descriptors
-	Descriptor globalDescriptor;
-	VkDescriptorSet _drawImageDescriptors;
-	VkDescriptorPool _descriptorPool;
-	VkDescriptorSetLayout _drawImageDescriptorLayout;
 	void CleanBuffers();
+
+	void SetupDescriptor();
 };

@@ -64,7 +64,7 @@ struct ShaderData
 };
 
 
-
+static int _frameNumber{ 0 };
 constexpr unsigned int MAX_CONCURRENT_FRAMES = 2;
 
 // macro to check for Vulkan iteractions errors

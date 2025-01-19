@@ -3,6 +3,7 @@
 #include "systems/model.h"
 #include "vk_types.h"
 #include "vk_pipelines.h"
+#include "vk_descriptor.h"
 #include <vulkan/vulkan.h>
 
 
@@ -18,31 +19,28 @@ private:
 	std::vector<VulkanImage> _textures;
 	std::vector<Vertex> _vertices;
 	std::vector<uint32_t> _indices;
+	std::vector<uint32_t> _currentMeshSize;
 	uint32_t _meshCount;
+	
 
 	void SetupMeshData();
 	void Cleanup();
-	// one ubo per frame, so we can have overframe overlap to be sure uniforms arent updated while still in use
-	std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> _uniformBuffers;
+
 	VulkanImage StbiLoadTexture(const char* fileName);
 
 	void CreateIndexBuffer();
 	void CreateVertexBuffer();
-	void Draw(VkCommandBuffer cmd, VkPipelineLayout pipelineLayout);
+	void Draw(VkCommandBuffer cmd, uint32_t indicesCount);
+	
+	VkSampler _sampler;
 public:
-	void DrawMeshes(VkCommandBuffer cmd, VkPipelineLayout pipelineLayout);
+	const std::vector<VulkanImage> GetTextures() const { return _textures; }
+	const uint32_t GetMeshCount() const { return _meshCount; }
+	const VkSampler GetSampler() const { return _sampler; }
+	void DrawMeshes(VkCommandBuffer cmd);
 	const MeshBuffer& GetBuffers() const { return _meshBuffer; }
-	const uint32_t& GetIndicesCount() const{ return static_cast<uint32_t>(_indices.size()); }
-	const uint32_t& GetVerticesCount() const{ return static_cast<uint32_t>(_vertices.size()); }
-	void SetupBuffers();
-	void SetVulkanStructures(VkDevice device, VkPhysicalDevice physDevice, VkCommandPool commandPool, VkQueue queue);
-	VulkanMesh()
-	{
-		SetupMeshData();
-	}
-	~VulkanMesh()
-	{
-		Cleanup();
-	}
+	void CreateBuffers();
+	void SetStructures(VkDevice device, VkPhysicalDevice physDevice, 
+		VkCommandPool commandPool, VkQueue queue);
 
 };

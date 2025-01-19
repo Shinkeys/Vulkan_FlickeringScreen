@@ -23,11 +23,6 @@ constexpr bool bUseValidationLayers{ true };
 
 
 
-void CreateLogicalDevice(VkDevice device)
-{
-
-}
-
 void VulkanEngine::init()
 {
 	_windowManager->InitializeGLFW();
@@ -41,8 +36,10 @@ void VulkanEngine::init()
 	init_sync_structures();
 
 	PassVulkanStructures();
-	CreateVertexBuffer();
-	
+	SetupExternalVulkanStructures();
+
+	SetupDescriptor();
+
 	CreatePipeline();
 
 	init_imgui();
@@ -54,7 +51,7 @@ void VulkanEngine::init()
 
 void VulkanEngine::PassVulkanStructures()
 {
-	_mesh.SetVulkanStructures(_device, _chosenDevice, _immediate._immediateCommandPool, _graphicsQueue);
+	_mesh.SetStructures(_device, _chosenDevice, _immediate._immediateCommandPool, _graphicsQueue);
 }
 
 void VulkanEngine::init_vulkan()
@@ -89,7 +86,6 @@ void VulkanEngine::init_vulkan()
 	features12.descriptorBindingPartiallyBound = VK_TRUE;
 	features12.runtimeDescriptorArray = VK_TRUE;
 	features12.descriptorIndexing = VK_TRUE;
-
 
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physDevice{ selector
@@ -129,7 +125,6 @@ void VulkanEngine::init_vulkan()
 	allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 
 	vmaCreateAllocator(&allocatorInfo, &_allocator);
-
 
 }
 void VulkanEngine::init_swapchain()
@@ -218,6 +213,9 @@ void VulkanEngine::init_sync_structures()
 	}
 
 	VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_immediate._immediateFence));
+
+
+	_uniformBuffers = vkutil::CreateUniformBuffers(_device, _chosenDevice);
 }
 // swapchain // 
 void VulkanEngine::create_swapchain(uint32_t width, uint32_t height)
@@ -259,19 +257,14 @@ void VulkanEngine::destroy_swapchain()
 
 void VulkanEngine::CleanBuffers()
 {
-	vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
-	vkDestroyDescriptorPool(_device, globalDescriptor._pool, nullptr);
+	/*vkDestroyDescriptorPool(_device, globalDescriptor._pool, nullptr);*/
 	for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
 	{
 		vkDestroyBuffer(_device, _uniformBuffers[i].handle, nullptr);
 		vkFreeMemory(_device, _uniformBuffers[i].memory, nullptr);
 	}
 
-	// VERTEX INDEX BUFFERS
-	vkDestroyBuffer(_device, vertexBuffer.handle, nullptr);
-	vkFreeMemory(_device, vertexBuffer.memory, nullptr);
-	vkDestroyBuffer(_device, indexBuffer.handle, nullptr);
-	vkFreeMemory(_device, indexBuffer.memory, nullptr);
+	
 }
 
 void VulkanEngine::cleanup()
@@ -427,17 +420,13 @@ void VulkanEngine::draw()
 	VkRect2D scissor{ 0, 0, _windowManager->GetWindowWidth(), _windowManager->GetWindowHeight() };
 	vkCmdSetScissor(cmd, 0, 1, &scissor);
 	// Bind descriptor set for the current frame's uniform buffer, so the shader uses the data from that buffer for this draw
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_uniformBuffers[_frameNumber].descriptorSet, 0, nullptr);
+	//  &_uniformBuffers[_frameNumber].descriptorSet,
+	VkDescriptorSet set = _globalDescriptor.GetDescriptorSet();
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1,  &set, 0, nullptr);
 	// The pipeline (state object) contains all states of the rendering pipeline, binding it will set all the states specified at pipeline creation time
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 	// Bind triangle vertex buffer (contains position and colors)
-	VkDeviceSize offsets[1]{ 0 };
-	vkCmdBindVertexBuffers(cmd, 0, 1, &_mesh.GetBuffers().vertices.handle, offsets);
-	// Bind triangle index buffer
-	vkCmdBindIndexBuffer(cmd, _mesh.GetBuffers().indices.handle, 0, VK_INDEX_TYPE_UINT32);
-	// Draw indexed triangle
-	vkCmdDrawIndexed(cmd, _mesh.GetIndicesCount(), 1, 0, 0, 0);
-	//vkCmdDraw(cmd, _mesh.GetVerticesCount(), 1, 0, 0);
+	_mesh.DrawMeshes(cmd);
 	// Finish the current dynamic rendering section
 	vkCmdEndRendering(cmd);
 
@@ -528,9 +517,11 @@ void VulkanEngine::run()
 
 void VulkanEngine::CreatePipeline()
 {
+	VkDescriptorSetLayout descLayout = _globalDescriptor.GetDescriptorSetLayout();
+
 	VkPipelineLayoutCreateInfo computeLayout{};
 	computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	computeLayout.pSetLayouts = &_drawImageDescriptorLayout;
+	computeLayout.pSetLayouts = &descLayout;
 	computeLayout.setLayoutCount = 1;
 	VK_CHECK(vkCreatePipelineLayout(_device, &computeLayout, nullptr, &_pipelineLayout));
 
@@ -807,11 +798,19 @@ void VulkanEngine::draw_imgui(VkCommandBuffer cmdBuffer, VkImageView targetImage
 	vkCmdEndRendering(cmdBuffer);
 }
 
-void VulkanEngine::CreateVertexBuffer()
+void VulkanEngine::SetupExternalVulkanStructures()
 {
-	_mesh.SetupBuffers();
+	_globalDescriptor.SetDevice(_device);
+	_mesh.CreateBuffers();
+
 }
 
-
+void VulkanEngine::SetupDescriptor()
+{
+	_globalDescriptor.DescriptorBasicSetup();
+	_globalDescriptor.UpdateUBOBindings(_uniformBuffers, _globalDescriptor.GetDescriptorSet());
+	_globalDescriptor.UpdateBindlessBindings(_globalDescriptor.GetDescriptorSet(),
+		_mesh.GetTextures(), _mesh.GetMeshCount(), _mesh.GetSampler());
+}
 
 
