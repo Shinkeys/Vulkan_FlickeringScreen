@@ -13,14 +13,8 @@ struct Vertex
 
 struct Texture
 {
-	uint32_t diffuse_id{ 0 };
-	uint32_t specular_id{ 0 };
-	uint32_t emissive_id{ 0 };
-	uint32_t normal_id{ 0 };
-	aiString diffuse_path;
-	aiString specular_path;
-	aiString emissive_path;
-	aiString normal_path;
+	uint32_t id;
+	aiString path;
 };
 
 

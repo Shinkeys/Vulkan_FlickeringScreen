@@ -295,6 +295,9 @@ void VulkanEngine::cleanup()
 		CleanBuffers();
 		destroy_swapchain();
 
+		_globalDescriptor.Cleanup();
+		_mesh.Cleanup();
+
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 		vkDestroyDevice(_device, nullptr);
 
@@ -631,6 +634,8 @@ void VulkanEngine::CreatePipeline()
 	shaderStages[1].module = vkutil::LoadShader("shaders/main_frag.spv", _device);
 	shaderStages[1].pName = "main";
 	assert(shaderStages[1].module != VK_NULL_HANDLE);
+
+
 	
 	// set pipeline shader stage info
 	pipelineCI.stageCount = static_cast<uint32_t>(shaderStages.size());

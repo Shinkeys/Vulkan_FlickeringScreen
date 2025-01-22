@@ -1,0 +1,24 @@
+# Blender 4.3.1 MTL File: 'None'
+# www.blender.org
+
+newmtl personage
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd C:\Users\Sasha\Desktop\Vulkan_FlickeringScreen\Vulkanoid\objects\models\textures\manetje_1_burh_color.tga.png
+map_Ks C:\Users\Sasha\Desktop\Vulkan_FlickeringScreen\Vulkanoid\objects\models\textures\emmision_mp_burh_color.tga.png
+map_Ke C:\Users\Sasha\Desktop\Vulkan_FlickeringScreen\Vulkanoid\objects\models\textures\Emmision__color.tga.png
+
+newmtl wapen
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd C:\Users\Sasha\Desktop\Vulkan_FlickeringScreen\Vulkanoid\objects\models\textures\hellenbaart__color.tga.png
+map_Bump C:\Users\Sasha\Desktop\Vulkan_FlickeringScreen\Vulkanoid\objects\models\textures\smoke.png
+#end

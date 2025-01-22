@@ -32,14 +32,14 @@ void VulkanMesh::SetupMeshData()
 		_indices.insert(_indices.end(), std::make_move_iterator(model.GetMeshData()[i].indices.begin()),
 			std::make_move_iterator(model.GetMeshData()[i].indices.end()));
 
-		_currentMeshSize.push_back(static_cast<uint32_t>(
-			model.GetMeshData()[i].indices.size()));
-		
+	
+		uint32_t currentIndicesCount = static_cast<uint32_t>(
+			model.GetMeshData()[i].indices.size());
+
+		_currentMeshSize.push_back(currentIndicesCount);
+
 		Texture currentTexture = model.GetMeshData()[i].textures;
-		_textures.push_back(StbiLoadTexture((currentTexture.diffuse_path.C_Str())));
-		_textures.push_back(StbiLoadTexture((currentTexture.emissive_path.C_Str())));
-		_textures.push_back(StbiLoadTexture((currentTexture.normal_path.C_Str())));
-		_textures.push_back(StbiLoadTexture((currentTexture.specular_path.C_Str())));
+		_textures.push_back(StbiLoadTexture(currentTexture.path.C_Str()));
 	}
 
 	_meshCount = model.GetMeshData().size();
@@ -79,7 +79,7 @@ VulkanImage VulkanMesh::StbiLoadTexture(const char* fileName)
 
 		VkExtent3D imageExtent;
 		imageExtent.width = static_cast<uint32_t>(texWidth);
-		imageExtent.height = static_cast<uint32_t>(texWidth);
+		imageExtent.height = static_cast<uint32_t>(texHeight);
 		imageExtent.depth = 1;
 
 		VkImageCreateInfo imageInfo = vkinit::ImageCreateInfo(
@@ -87,7 +87,7 @@ VulkanImage VulkanMesh::StbiLoadTexture(const char* fileName)
 
 		
 		// sampled bit means we want to access image in the shader
-		vkutil::CreateImage(_device, _physicalDevice, image, imageInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		image = vkutil::CreateImage(_device, _physicalDevice, imageInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		vkutil::CopyBufferToImage(_device, stagingBuffer.handle, image.handle, _commandPool, imageExtent, _queue);
 
@@ -110,21 +110,20 @@ VulkanImage VulkanMesh::StbiLoadTexture(const char* fileName)
 
 void VulkanMesh::DrawMeshes(VkCommandBuffer cmd)
 {
+	VkDeviceSize offsets[1]{ 0 };
+	vkCmdBindVertexBuffers(cmd, 0, 1, &_meshBuffer.vertices.handle, offsets);
+	vkCmdBindIndexBuffer(cmd, _meshBuffer.indices.handle, 0, VK_INDEX_TYPE_UINT32);
+	// Draw indexed triangle
 	for (uint32_t i = 0; i < _meshCount; ++i)
 	{
 		const uint32_t indicesToDraw = static_cast<uint32_t>(_currentMeshSize[i]);
-		Draw(cmd, indicesToDraw);
+		Draw(cmd, indicesToDraw, i);
 	}
 }
 
-void VulkanMesh::Draw(VkCommandBuffer cmd, uint32_t indicesCount)
+void VulkanMesh::Draw(VkCommandBuffer cmd, uint32_t indicesCount, uint32_t index)
 {
-	VkDeviceSize offsets[1]{ 0 };
-	vkCmdBindVertexBuffers(cmd, 0, 1, &_meshBuffer.vertices.handle, offsets);
-	// Bind triangle index buffer
-	vkCmdBindIndexBuffer(cmd, _meshBuffer.indices.handle, 0, VK_INDEX_TYPE_UINT32);
-	// Draw indexed triangle
-	vkCmdDrawIndexed(cmd, indicesCount, 1, 0, 0, 0);
+	vkCmdDrawIndexed(cmd, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 }
 
 void VulkanMesh::CreateBuffers()

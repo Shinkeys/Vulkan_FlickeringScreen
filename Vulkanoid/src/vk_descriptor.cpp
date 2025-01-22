@@ -38,20 +38,20 @@ VkDescriptorSetLayout Descriptor::CreateBindlessDescriptorLayout()
 		// means that it is a variable binding of desc, which size would be specified during allocation
 
 	std::array<VkDescriptorSetLayoutBinding, 2> layoutBinding{};
-	layoutBinding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	layoutBinding[0].descriptorCount = maxBindlessResources;
+	layoutBinding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	layoutBinding[0].descriptorCount = 1;
 	layoutBinding[0].binding = 0;
-	layoutBinding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+	layoutBinding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	
-	layoutBinding[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	layoutBinding[1].descriptorCount = 1;
+	layoutBinding[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	layoutBinding[1].descriptorCount = maxBindlessResources;
 	layoutBinding[1].binding = 1;
-	layoutBinding[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	layoutBinding[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	VkDescriptorSetLayoutCreateInfo descriptorLayoutCI{
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
 	};
-	descriptorLayoutCI.bindingCount = 1;
+	descriptorLayoutCI.bindingCount = static_cast<uint32_t>(layoutBinding.size());
 	descriptorLayoutCI.pBindings = layoutBinding.data();
 	descriptorLayoutCI.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
 	VkDescriptorSetLayout setLayout;
@@ -61,6 +61,28 @@ VkDescriptorSetLayout Descriptor::CreateBindlessDescriptorLayout()
 	return setLayout;
 }
 
+VkDescriptorSet Descriptor::AllocateBindlessSet(VkDescriptorSetLayout layout)
+{
+	VkDescriptorSetAllocateInfo allocInfo{ .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+	allocInfo.pNext = nullptr;
+	allocInfo.descriptorPool = _pool;
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = &layout;
+
+	VkDescriptorSetVariableDescriptorCountAllocateInfo countInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO };
+	uint32_t maxBinding = 1;
+	countInfo.descriptorSetCount = 1;
+	// max allocate number
+	countInfo.pDescriptorCounts = &maxBinding;
+
+	allocInfo.pNext = &countInfo;
+
+	VkDescriptorSet descriptorSet;
+
+	VK_CHECK(vkAllocateDescriptorSets(_device, &allocInfo, &descriptorSet));
+
+	return descriptorSet;
+}
 void Descriptor::CreateDescriptorSetLayout(VkDescriptorType descType,
 	VkShaderStageFlags flags, uint32_t descriptorCount /* 1 */)
 {
@@ -80,28 +102,6 @@ void Descriptor::CreateDescriptorSetLayout(VkDescriptorType descType,
 	VK_CHECK(vkCreateDescriptorSetLayout(_device, &descriptorLayoutCI, nullptr, &_setLayout));
 }
 
-VkDescriptorSet Descriptor::AllocateBindlessSet(VkDescriptorSetLayout layout)
-{
-	VkDescriptorSetAllocateInfo allocInfo{ .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-	allocInfo.pNext = nullptr;
-	allocInfo.descriptorPool = _pool;
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = &layout;
-
-	VkDescriptorSetVariableDescriptorCountAllocateInfo countInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO };
-	uint32_t maxBinding = maxBindlessResources - 1;
-	countInfo.descriptorSetCount = 1;
-	// max allocate number
-	countInfo.pDescriptorCounts = &maxBinding;
-
-	allocInfo.pNext = &countInfo;
-
-	VkDescriptorSet descriptorSet;
-
-	VK_CHECK(vkAllocateDescriptorSets(_device, &allocInfo, &descriptorSet));
-
-	return descriptorSet;
-}
 
 
 
@@ -138,7 +138,7 @@ void Descriptor::UpdateUBOBindings(std::array<UniformBuffer, MAX_CONCURRENT_FRAM
 		writeDescSet.descriptorCount = 1;
 		writeDescSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		writeDescSet.pBufferInfo = &bufferInfo;
-		writeDescSet.dstBinding = 1;
+		writeDescSet.dstBinding = 0;
 		vkUpdateDescriptorSets(_device, 1, &writeDescSet, 0, VK_NULL_HANDLE);
 	}
 }
@@ -158,7 +158,7 @@ void Descriptor::UpdateBindlessBindings(VkDescriptorSet dstSet,
 
 		VkWriteDescriptorSet writeDescSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 		writeDescSet.dstSet = dstSet;
-		writeDescSet.dstBinding = 0;
+		writeDescSet.dstBinding = 1;
 		writeDescSet.dstArrayElement = i;
 		writeDescSet.descriptorCount = 1;
 		writeDescSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

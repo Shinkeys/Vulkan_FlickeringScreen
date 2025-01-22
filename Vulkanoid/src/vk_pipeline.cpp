@@ -47,17 +47,19 @@ VkShaderModule vkutil::LoadShader(const char* filePath,
 }
 
 
-void vkutil::CreateImage(VkDevice device, VkPhysicalDevice physDevice, VulkanImage& image, VkImageCreateInfo imageInfo,
+VulkanImage vkutil::CreateImage(VkDevice device, VkPhysicalDevice physDevice, VkImageCreateInfo imageInfo,
 	VkMemoryPropertyFlags memFlags)
 {
-	VkMemoryRequirements memReqs;
-	vkGetImageMemoryRequirements(device, image.handle, &memReqs);
+
+	VulkanImage image;
 
 	if ((vkCreateImage(device, &imageInfo, nullptr, &image.handle) != VK_SUCCESS))
 	{
 		throw std::runtime_error("Vk_Pipeline: unable to create image from provided data\n");
 	}
 
+	VkMemoryRequirements memReqs;
+	vkGetImageMemoryRequirements(device, image.handle, &memReqs);
 	VkPhysicalDeviceMemoryProperties deviceProps;
 	vkGetPhysicalDeviceMemoryProperties(physDevice, &deviceProps);
 
@@ -72,6 +74,8 @@ void vkutil::CreateImage(VkDevice device, VkPhysicalDevice physDevice, VulkanIma
 	}
 
 	vkBindImageMemory(device, image.handle, image.memory, 0);
+
+	return image;
 }
 
 
@@ -164,21 +168,41 @@ void vkutil::CopyBufferToImage(VkDevice device, VkBuffer srcBuffer, VkImage dstI
 	copyBuff.imageExtent = { extent.width, extent.height, extent.depth };
 
 
+	TransitionImage(commandBuffer, dstImage, VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VkImageSubresourceRange
+		{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
+
 	vkCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		1, &copyBuff);
 
+	TransitionImage(commandBuffer, dstImage, VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VkImageSubresourceRange
+		{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
 	vkEndCommandBuffer(commandBuffer);
-
-	TransitionImage(commandBuffer, dstImage, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 
-		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
-
 	
 	SubmitToQueue(device, queue, cmdPool, commandBuffer);
 
+	
 	vkFreeCommandBuffers(device, cmdPool, 1, &commandBuffer);
+}
+void vkutil::SubmitToQueue(VkDevice device, VkQueue queue, VkCommandPool cmdPool, VkCommandBuffer commandBuffer)
+{
+	// pushing this buffer to the queue
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	// reminder: someday  would be cool to separate this queue and use transfer queue for operations like that
+	vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(queue);
 }
 
 void vkutil::TransitionImage(VkCommandBuffer cmd, VkImage image,
@@ -205,19 +229,6 @@ void vkutil::TransitionImage(VkCommandBuffer cmd, VkImage image,
 		1, &imageMemoryBarrier);
 }
 
-void vkutil::SubmitToQueue(VkDevice device, VkQueue queue, VkCommandPool cmdPool, VkCommandBuffer commandBuffer)
-{
-	// pushing this buffer to the queue
-	VkSubmitInfo submitInfo{};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer;
-
-	// reminder: someday  would be cool to separate this queue and use transfer queue for operations like that
-	vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(queue);
-	vkFreeCommandBuffers(device, cmdPool, 1, &commandBuffer);
-}
 
 void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination,
 	VkExtent2D srcSize, VkExtent2D destSize)

@@ -15,7 +15,7 @@ namespace vkutil
 		VkDeviceSize deviceSize, VulkanBuffer& bufferData,
 		VkBufferUsageFlags usage, VkMemoryPropertyFlags memFlags);
 
-	void CreateImage(VkDevice device, VkPhysicalDevice physDevice, VulkanImage& image, VkImageCreateInfo imageInfo,
+	VulkanImage CreateImage(VkDevice device, VkPhysicalDevice physDevice, VkImageCreateInfo imageInfo,
 		VkMemoryPropertyFlags memFlags);
 
 	void CopyBufferToImage(VkDevice device, VkBuffer srcBuffer, VkImage dstImage,

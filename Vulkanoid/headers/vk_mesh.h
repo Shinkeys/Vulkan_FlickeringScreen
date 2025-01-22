@@ -20,20 +20,21 @@ private:
 	std::vector<Vertex> _vertices;
 	std::vector<uint32_t> _indices;
 	std::vector<uint32_t> _currentMeshSize;
+	std::vector<uint32_t> _offset;
 	uint32_t _meshCount;
 	
 
 	void SetupMeshData();
-	void Cleanup();
 
 	VulkanImage StbiLoadTexture(const char* fileName);
 
 	void CreateIndexBuffer();
 	void CreateVertexBuffer();
-	void Draw(VkCommandBuffer cmd, uint32_t indicesCount);
+	void Draw(VkCommandBuffer cmd, uint32_t indicesCount, uint32_t index);
 	
 	VkSampler _sampler;
 public:
+	void Cleanup();
 	const std::vector<VulkanImage> GetTextures() const { return _textures; }
 	const uint32_t GetMeshCount() const { return _meshCount; }
 	const VkSampler GetSampler() const { return _sampler; }

@@ -9,8 +9,10 @@ void ModelLoader::SetupModelLoader()
 }
 void ModelLoader::FillVectorOfPaths()
 {
-	std::filesystem::path model1 = "objects/models/blacksmith/scene.gltf";
-	_pathToModels.push_back(model1);
+	/*std::filesystem::path model1 = "objects/models/blacksmith/scene.gltf";
+	_pathToModels.push_back(model1);*/
+	std::filesystem::path model2 = "objects/models/character.obj";
+	_pathToModels.push_back(model2);
 }
 
 void ModelLoader::LoadModel(std::filesystem::path& pathToModel)
@@ -59,16 +61,17 @@ Mesh ModelLoader::ProcessMesh(aiMesh* aiMesh, const aiScene* scene)
 	}
 	
 	mesh.indices.reserve(aiMesh->mNumFaces);
-	static uint32_t offset = 0;
+	mesh.vertex.reserve(sortedVertices.size());
+	static uint32_t index = 0;
 	for (uint32_t i = 0; i < aiMesh->mNumFaces; ++i)
 	{
 		aiFace face = aiMesh->mFaces[i];
 		for (uint32_t j = 0; j < face.mNumIndices; ++j)
 		{
-			mesh.indices.push_back(offset);
+			mesh.indices.push_back(index);
 			mesh.vertex.push_back(sortedVertices[face.mIndices[j]]);
 
-			++offset;
+			++index;
 		}
 	}
 
@@ -104,13 +107,8 @@ Texture ModelLoader::ProcessMaterial(aiMaterial* material, std::array<aiTextureT
 			aiString str;
 			// to replace index later
 			material->GetTexture(textureTypes[i], j, &str);
-			switch (textureTypes[i])
-			{
-			case aiTextureType_DIFFUSE: textures.diffuse_id = j + offset; textures.diffuse_path = str; break;
-			case aiTextureType_SPECULAR: textures.specular_id = j + offset; textures.specular_path = str; break;
-			case aiTextureType_EMISSIVE: textures.emissive_id = j + offset; textures.emissive_path = str; break;
-			case aiTextureType_HEIGHT: textures.normal_id = j + offset; textures.normal_path = str; break;
-			}
+			textures.id = j + offset; 
+			textures.path = str;
 
 		}
 		offset += static_cast<uint32_t>(currentTextureCount);
