@@ -63,9 +63,6 @@
     <ClCompile Include="src\Systems\camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Systems\ModelLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\vk_mesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -134,10 +131,7 @@
     <ClInclude Include="headers\window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="headers\systems\model.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="headers\systems\VertexTypes.h">
+    <ClInclude Include="headers\types\VertexTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="headers\vk_mesh.h">

@@ -636,7 +636,6 @@ void VulkanEngine::CreatePipeline()
 	assert(shaderStages[1].module != VK_NULL_HANDLE);
 
 
-	
 	// set pipeline shader stage info
 	pipelineCI.stageCount = static_cast<uint32_t>(shaderStages.size());
 	pipelineCI.pStages = shaderStages.data();
@@ -815,7 +814,7 @@ void VulkanEngine::SetupDescriptor()
 	_globalDescriptor.DescriptorBasicSetup();
 	_globalDescriptor.UpdateUBOBindings(_uniformBuffers, _globalDescriptor.GetDescriptorSet());
 	_globalDescriptor.UpdateBindlessBindings(_globalDescriptor.GetDescriptorSet(),
-		_mesh.GetTextures(), _mesh.GetMeshCount(), _mesh.GetSampler());
+		_mesh.GetTextures(), _mesh.GetTextures().size(), _mesh.GetSampler());
 }
 
 

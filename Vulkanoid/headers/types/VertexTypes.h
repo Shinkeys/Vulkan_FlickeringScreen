@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
-#include <unordered_map>
+
 #include <../glm/glm/glm.hpp>
+#include <assimp/types.h>
 
 struct Vertex
 {

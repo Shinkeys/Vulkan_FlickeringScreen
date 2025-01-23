@@ -22,7 +22,9 @@ namespace vkutil
 		VkCommandPool cmdPool, VkExtent3D extent, VkQueue queue);
 
 
-	void CopyBuffer(VkDevice device, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkCommandPool cmdPool, VkQueue queue);
+	void CopyBuffer(VkDevice device, VkBuffer srcBuffer,
+		VkBuffer dstBuffer, VkDeviceSize size,
+		VkCommandPool cmdPool, VkQueue queue);
 
 	VkSampler CreateSampler(VkDevice device);
 
