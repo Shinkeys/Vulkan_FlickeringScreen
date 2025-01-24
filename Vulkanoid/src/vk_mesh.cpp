@@ -12,7 +12,21 @@ void VulkanMesh::SetStructures(VkDevice device,
 	this->_commandPool = commandPool;
 	this->_queue = queue;
 
+	// proceed model loading
+	auto paths = FillVectorOfPaths();
+	assert(paths.size() > 0, "Vector of model paths is empty!\n");
+	
+	for (uint32_t i = 0; i < paths.size(); ++i)
+	{
+		LoadModel(paths[i]);
+	}
+
+
 	_sampler = vkutil::CreateSampler(_device);
+	_resources.PushFunction([=]
+		{
+			vkDestroySampler(_device, _sampler, nullptr);
+		});
 }
 
 
@@ -36,7 +50,7 @@ VulkanImage VulkanMesh::StbiLoadTexture(const char* fileName)
 		VulkanBuffer stagingBuffer;
 		vkutil::CreateBuffer(_device, _physicalDevice, imageSize, stagingBuffer,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
 
 		void* dataDst;
 		vkMapMemory(_device, stagingBuffer.memory, 0, imageSize, 0, &dataDst);
@@ -68,7 +82,16 @@ VulkanImage VulkanMesh::StbiLoadTexture(const char* fileName)
 
 		vkCreateImageView(_device, &viewInfo, nullptr, &image.view);
 
-		
+
+
+		vkDestroyBuffer(_device, stagingBuffer.handle,	nullptr);
+		vkFreeMemory(_device, stagingBuffer.memory, nullptr);
+		_resources.PushFunction([=]
+			{
+				vkDestroyImage(_device, image.handle, nullptr);
+				vkDestroyImageView(_device, image.view, nullptr);
+				vkFreeMemory(_device, image.memory, nullptr);
+			});
 	}
 
 	if (image.handle != VK_NULL_HANDLE)
@@ -105,6 +128,14 @@ void VulkanMesh::CreateBuffers()
 
 	vkDestroyBuffer(_device, scratchBuffer.handle, nullptr);
 	vkFreeMemory(_device, scratchBuffer.memory, nullptr);
+
+	_resources.PushFunction([=]
+		{
+			vkDestroyBuffer(_device, _geometryBuffers.vertices.handle, nullptr);
+			vkFreeMemory(_device, _geometryBuffers.vertices.memory, nullptr);
+			vkDestroyBuffer(_device, _geometryBuffers.indices.handle, nullptr);
+			vkFreeMemory(_device, _geometryBuffers.indices.memory, nullptr);
+		});
 }
 
 
@@ -125,7 +156,7 @@ void VulkanMesh::CreateVertexBuffer(VulkanBuffer& scratchBuffer, std::vector<Ver
 
 	vkutil::CreateBuffer(_device, _physicalDevice, bufferSize, _geometryBuffers.vertices,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, // and this buffer is destination of data now
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT); // and this flag means that we are using the most appropriate memory type for GPU
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); // and this flag means that we are using the most appropriate memory type for GPU
 
 	vkutil::CopyBuffer(_device, scratchBuffer.handle, _geometryBuffers.vertices.handle,
 		bufferSize, _commandPool, _queue);
@@ -154,18 +185,7 @@ void VulkanMesh::CreateIndexBuffer(VulkanBuffer& scratchBuffer, std::vector<uint
 
 void VulkanMesh::Cleanup()
 {
-	vkDestroyBuffer(_device, _geometryBuffers.vertices.handle, nullptr);
-	vkFreeMemory(_device, _geometryBuffers.vertices.memory, nullptr);
-	vkDestroyBuffer(_device, _geometryBuffers.indices.handle, nullptr);
-	vkFreeMemory(_device, _geometryBuffers.indices.memory, nullptr);
-
-	//for (uint32_t i = 0; i < _textures.size(); ++i)
-	//{
-	//	vkDestroyImage(_device, _textures[i].handle, nullptr);
-	//	vkFreeMemory(_device, _textures[i].memory, nullptr);
-	//}
-
-	vkDestroySampler(_device, _sampler, nullptr);
+	_resources.FlushQueue();
 }
 
 
@@ -259,6 +279,8 @@ void VulkanMesh::ProcessMaterial(aiMaterial* material, std::array<aiTextureType,
 	// need it when loading a lot of models, for example 10 models
 	// id should be unique for every texture
 	static uint32_t offset = 0;
+
+	const std::filesystem::path textureFolder = "objects/models/";
 	for (uint32_t i = 0; i < textureTypes.size(); ++i)
 	{
 		const uint32_t currentTextureCount = material->GetTextureCount(textureTypes[i]);
@@ -268,15 +290,14 @@ void VulkanMesh::ProcessMaterial(aiMaterial* material, std::array<aiTextureType,
 			// to replace index later
 			material->GetTexture(textureTypes[i], j, &str);
 			textures.id = j + offset;
-			textures.path = str;
+			textures.path = std::filesystem::absolute(textureFolder / str.C_Str());
 
+			std::cout << textures.path << "\n";
 		}
 		offset += static_cast<uint32_t>(currentTextureCount);
 	}
 
-	// loading textures and storing its data
-	// to do: put it to ModelDescriptor struct
-	/*_textureDesc.push_back(StbiLoadTexture(textures.path.C_Str()));*/
+	_modelDesc.textures.push_back(StbiLoadTexture(textures.path.string().c_str()));
 }
 
 void VulkanMesh::ProcessNode(aiNode* node, const aiScene* scene)
@@ -294,20 +315,13 @@ void VulkanMesh::ProcessNode(aiNode* node, const aiScene* scene)
 	}
 } 
 
-void VulkanMesh::SetupModelLoader(std::vector<std::filesystem::path>& pathsToModels)
-{
-	for (uint32_t i = 0; i < pathsToModels.size(); ++i)
-	{
-		LoadModel(pathsToModels[i]);
-	}
-}
 std::vector<std::filesystem::path> VulkanMesh::FillVectorOfPaths()
 {
 	std::vector<std::filesystem::path> pathsToModels;
-	/*std::filesystem::path model1 = "objects/models/blacksmith/scene.gltf";
-	_pathToModels.push_back(model1);*/
-	std::filesystem::path model2 = "objects/models/character.obj";
-	pathsToModels.push_back(model2);
+	std::filesystem::path model1 = "objects/models/blacksmith/scene.gltf";
+	pathsToModels.push_back(model1);
+	/*std::filesystem::path model2 = "objects/models/character.obj";
+	pathsToModels.push_back(model2);*/
 
 
 	return pathsToModels;

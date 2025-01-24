@@ -178,13 +178,14 @@
     <ClInclude Include="headers\systems\camera.h" />
     <ClInclude Include="headers\types\VertexTypes.h" />
     <ClInclude Include="headers\vk_mesh.h" />
+    <ClInclude Include="headers\vk_resources.h" />
     <ClInclude Include="headers\window.h" />
     <ClInclude Include="headers\vk_descriptor.h" />
     <ClInclude Include="headers\vk_engine.h" />
     <ClInclude Include="headers\vk_initializers.h" />
     <ClInclude Include="headers\vk_pipelines.h" />
     <ClInclude Include="headers\vk_tools.h" />
-    <ClInclude Include="headers\vk_types.h" />
+    <ClInclude Include="headers\types\vk_types.h" />
     <ClInclude Include="precompiled\stdafx.h" />
     <ClInclude Include="vendor\glm\glm\gtc\matrix_transform.hpp" />
     <ClInclude Include="vendor\glm\glm\mat4x4.hpp" />

@@ -12,7 +12,7 @@ void Descriptor::DescriptorBasicSetup()
 
 void Descriptor::Cleanup()
 {
-	vkDestroyDescriptorPool(_device, _pool, nullptr);
+	_resources.FlushQueue();
 }
 
 void Descriptor::AllocatePool()
@@ -29,6 +29,11 @@ void Descriptor::AllocatePool()
 	// set max number of descriptor sets that can be requested from this pool
 	descriptorPoolCI.maxSets = maxBindlessResources;
 	VK_CHECK(vkCreateDescriptorPool(_device, &descriptorPoolCI, nullptr, &_pool));
+
+	_resources.PushFunction([=]
+		{
+			vkDestroyDescriptorPool(_device, _pool, nullptr);
+		});
 }
 
 VkDescriptorSetLayout Descriptor::CreateBindlessDescriptorLayout()
@@ -57,6 +62,11 @@ VkDescriptorSetLayout Descriptor::CreateBindlessDescriptorLayout()
 	VkDescriptorSetLayout setLayout;
 
 	VK_CHECK(vkCreateDescriptorSetLayout(_device, &descriptorLayoutCI, nullptr, &setLayout));
+
+	_resources.PushFunction([=]
+		{
+			vkDestroyDescriptorSetLayout(_device, setLayout, nullptr);
+		});
 
 	return setLayout;
 }
@@ -100,6 +110,11 @@ void Descriptor::CreateDescriptorSetLayout(VkDescriptorType descType,
 	descriptorLayoutCI.pBindings = &layoutBinding;
 
 	VK_CHECK(vkCreateDescriptorSetLayout(_device, &descriptorLayoutCI, nullptr, &_setLayout));
+
+	_resources.PushFunction([=]
+		{
+			vkDestroyDescriptorSetLayout(_device, _setLayout, nullptr);
+		});
 }
 
 
@@ -146,7 +161,7 @@ void Descriptor::UpdateUBOBindings(std::array<UniformBuffer, MAX_CONCURRENT_FRAM
 
 // to do: refactor
 void Descriptor::UpdateBindlessBindings(VkDescriptorSet dstSet, 
-	std::vector<VulkanImage> images, uint32_t texturePathsSize, VkSampler sampler)
+	const std::vector<VulkanImage>& images, uint32_t texturePathsSize, VkSampler sampler)
 {
 	for (uint32_t i = 0; i < texturePathsSize; ++i)
 	{

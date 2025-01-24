@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "vk_types.h"
+#include "types/vk_types.h"
 #include "vk_descriptor.h"
 #include "vk_pipelines.h"
 #include "vk_tools.h"
@@ -11,7 +11,7 @@
 #include "systems/camera.h"
 #include "vk_mesh.h"
 
-#include "../vendor/vma/vk_mem_alloc.h"
+
 
 
 
@@ -108,8 +108,9 @@ public:
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
 private:
-	Window* _windowManager = new Window();
-	Camera _camera{ _windowManager };
+	ResourceManager _resources;
+	std::unique_ptr<Window> _windowManager = std::make_unique<Window>();
+	Camera _camera{ _windowManager.get()};
 	VulkanMesh _mesh;
 	
 	void init_vulkan();
@@ -126,8 +127,10 @@ private:
 
 	void PassVulkanStructures();
 
-	void init_imgui();
-	void draw_imgui(VkCommandBuffer cmdBuffer, VkImageView targetImageView);
+	void InitImgui();
+	void DrawImgui(VkCommandBuffer cmdBuffer, VkImageView targetImageView);
+	void DestroyImgui();
+	VkDescriptorPool _imguiPool;
 
 	void SetupDepthStencil();
 

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "vk_types.h"
+#include "types/vk_types.h"
+#include "vk_resources.h"
 
 #include <vector>
 #include <array>
@@ -12,6 +13,8 @@ class Descriptor
 {
 private:	
 	VkDevice _device;
+	ResourceManager _resources;
+
 
 	// to do it later 
 	const uint32_t maxBindlessResources = 16536;
@@ -30,7 +33,7 @@ public:
 	const VkDescriptorSetLayout GetDescriptorSetLayout() const { return _setLayout; }
 	const VkDescriptorSet GetDescriptorSet() const { return _descSet; }
 	void UpdateBindlessBindings(VkDescriptorSet dstSet,
-		std::vector<VulkanImage> images, uint32_t texturePathsSize, VkSampler sampler);
+		const std::vector<VulkanImage>& images, uint32_t texturePathsSize, VkSampler sampler);
 	void SetDevice(VkDevice device) { this->_device = device; }
 	void Cleanup();
 	void DescriptorBasicSetup();

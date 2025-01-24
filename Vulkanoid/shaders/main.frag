@@ -14,5 +14,6 @@ layout (set = 0, binding = 1) uniform sampler2D textures[];
 
 void main() 
 {
-	outFragColor = vec4(vec3(1.0), 1.0);
+	outFragColor = texture(textures[0], FSinput.uvCoords);
+//	outFragColor = vec4(1.0);
 }

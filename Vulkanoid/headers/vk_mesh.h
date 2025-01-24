@@ -1,9 +1,8 @@
 #pragma once
 
-#include "vk_types.h"
+#include "types/vk_types.h"
 #include "vk_pipelines.h"
 #include "vk_descriptor.h"
-#include <vulkan/vulkan.h>
 
 #include "../headers/types/VertexTypes.h"
 
@@ -13,6 +12,7 @@
 
 #include <filesystem>
 
+#include "vk_resources.h"
 
 constexpr uint32_t g_MAX_DRAW_COUNT = 1024;
 
@@ -20,7 +20,7 @@ struct Geometry
 {
 	VulkanBuffer vertices;
 	VulkanBuffer indices;
-	VulkanBuffer indirectCount;
+	/*VulkanBuffer indirectCount;*/
 	uint32_t modelCount{ 0 };
 };
 
@@ -30,6 +30,7 @@ struct ModelDescriptor
 	std::vector<uint32_t> indices;
 	std::vector<uint32_t> meshIndexOffset;
 	std::vector<uint32_t> currentMeshVertices;
+	std::vector<VulkanImage> textures;
 };
 
 
@@ -37,6 +38,8 @@ struct ModelDescriptor
 class VulkanMesh
 {
 private:
+	ResourceManager _resources;
+
 	VkDevice _device;
 	VkPhysicalDevice _physicalDevice;
 	VkCommandPool _commandPool;
@@ -45,8 +48,6 @@ private:
 	Geometry _geometryBuffers;
 
 	ModelDescriptor _modelDesc;
-	std::vector<VulkanImage> _textureDesc;
-
 
 	VulkanImage StbiLoadTexture(const char* fileName);
 
@@ -62,22 +63,14 @@ private:
 	void LoadModel(std::filesystem::path& pathToModel);
 	void ProcessNode(aiNode* node, const aiScene* scene);
 	void ProcessMaterial(aiMaterial* material, std::array<aiTextureType, 4> textureTypes);
-	void SetupModelLoader(std::vector<std::filesystem::path>& pathsToModels);
+
 	std::vector<std::filesystem::path> FillVectorOfPaths();
 
 
 
 public:
-	VulkanMesh()
-	{
-		auto paths = FillVectorOfPaths();
-		assert(paths.size() > 0, "Vector of model paths is empty!");
-		SetupModelLoader(paths);
-	}
 	void Cleanup();
 	
-
-	const std::vector<VulkanImage>& GetTextures() const { return _textureDesc; }
 	const ModelDescriptor& GetModels() const { return _modelDesc; }
 
 	const VkSampler GetSampler() const { return _sampler; }

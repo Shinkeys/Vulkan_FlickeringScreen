@@ -71,7 +71,7 @@
     <ClInclude Include="headers\vk_engine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="headers\vk_types.h">
+    <ClInclude Include="headers\types\vk_types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="headers\vk_initializers.h">
@@ -135,6 +135,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="headers\vk_mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\vk_resources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

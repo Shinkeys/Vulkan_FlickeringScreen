@@ -4,6 +4,8 @@
 #include <../glm/glm/glm.hpp>
 #include <assimp/types.h>
 
+#include <filesystem>
+
 struct Vertex
 {
 	glm::vec3 position;
@@ -14,7 +16,7 @@ struct Vertex
 struct Texture
 {
 	uint32_t id;
-	aiString path;
+	std::filesystem::path path;
 };
 
 

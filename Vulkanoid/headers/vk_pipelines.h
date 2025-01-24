@@ -2,7 +2,7 @@
 #include <fstream>
 #include "vk_initializers.h"
 #include "vk_tools.h"
-#include "vk_types.h"
+#include "types/vk_types.h"
 
 #include <vector>
 #include <array>

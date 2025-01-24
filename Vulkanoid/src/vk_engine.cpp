@@ -3,7 +3,7 @@
 #include <GLFW/glfw3.h>
 
 #include "../vendor/vk-bootstrap/src/VkBootstrap.h"
-#include "../headers/vk_types.h"
+#include "../headers/types/vk_types.h"
 #include "../headers/vk_initializers.h"
 #include "../headers/vk_pipelines.h"
 
@@ -42,7 +42,7 @@ void VulkanEngine::init()
 
 	CreatePipeline();
 
-	init_imgui();
+	InitImgui();
 
 
 	// Everything went fine
@@ -166,6 +166,13 @@ void VulkanEngine::init_swapchain()
 
 	VK_CHECK(vkCreateImageView(_device, &rview_info, nullptr, &_drawImage.imageView));
 
+	_resources.PushFunction([=]
+		{
+			vkDestroyImage(_device, _drawImage.image, nullptr);
+			vkDestroyImageView(_device, _drawImage.imageView, nullptr);
+			vmaFreeMemory(_allocator, _drawImage.allocation);
+		});
+
 }
 void VulkanEngine::init_commands()
 {
@@ -182,9 +189,19 @@ void VulkanEngine::init_commands()
 
 
 		VK_CHECK(vkAllocateCommandBuffers(_device, &cmdAllocInfo, &_frames[i]._mainCommandBuffer));
+
+		_resources.PushFunction([=]
+			{
+				vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
+			});
 	}
 
 	VK_CHECK(vkCreateCommandPool(_device, &commandPoolInfo, nullptr, &_immediate._immediateCommandPool));
+
+	_resources.PushFunction([=]
+		{
+			vkDestroyCommandPool(_device, _immediate._immediateCommandPool, nullptr);
+		});
 
 	// allocating buffer for immediate submits
 	VkCommandBufferAllocateInfo cmdAllocInfo{ vkinit::CommandBufferAllocateInfo(_immediate._immediateCommandPool, 1) };
@@ -210,12 +227,23 @@ void VulkanEngine::init_sync_structures()
 		VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_frames[i]._swapchainSemaphore));
 		VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_frames[i]._renderSemaphore));
 
+		_resources.PushFunction([=]
+			{
+				vkDestroyFence(_device, _frames[i]._renderFence, nullptr);
+				vkDestroySemaphore(_device, _frames[i]._swapchainSemaphore, nullptr);
+				vkDestroySemaphore(_device, _frames[i]._renderSemaphore, nullptr);
+			});
 	}
 
 	VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_immediate._immediateFence));
 
+	_resources.PushFunction([=]
+		{
+			vkDestroyFence(_device, _immediate._immediateFence, nullptr);
+		});
 
 	_uniformBuffers = vkutil::CreateUniformBuffers(_device, _chosenDevice);
+
 }
 // swapchain // 
 void VulkanEngine::create_swapchain(uint32_t width, uint32_t height)
@@ -272,25 +300,8 @@ void VulkanEngine::cleanup()
 	if (_isInitialized) {
 		vkDeviceWaitIdle(_device);
 
-		// destroy immediate data
-		vkDestroyCommandPool(_device, _immediate._immediateCommandPool, nullptr);
-		vkDestroyFence(_device, _immediate._immediateFence, nullptr);
 
-		for (int i = 0; i < MAX_CONCURRENT_FRAMES; i++) {
-			//already written from before
-			vkDestroyCommandPool(_device, _frames[i]._commandPool, nullptr);
-
-			//destroy sync objects
-			vkDestroyFence(_device, _frames[i]._renderFence, nullptr);
-			vkDestroySemaphore(_device, _frames[i]._renderSemaphore, nullptr);
-			vkDestroySemaphore(_device, _frames[i]._swapchainSemaphore, nullptr);
-		}
-
-		vkDestroyImage(_device, _drawImage.image, nullptr);
-		vkDestroyImageView(_device, _drawImage.imageView, nullptr);
-		vkDestroyImage(_device, _depthStencil.image, nullptr);
-		vkFreeMemory(_device, _depthStencil.memory, nullptr);
-		vkDestroyImageView(_device, _depthStencil.view, nullptr);
+		_resources.FlushQueue();
 
 		CleanBuffers();
 		destroy_swapchain();
@@ -298,13 +309,15 @@ void VulkanEngine::cleanup()
 		_globalDescriptor.Cleanup();
 		_mesh.Cleanup();
 
+		DestroyImgui();
+
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 		vkDestroyDevice(_device, nullptr);
 
 		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 
 		vkDestroyInstance(_instance, nullptr);
-
+		
 		// destroying window
 		glfwDestroyWindow(_windowManager->GetWindowInstance());
 		glfwTerminate();
@@ -664,6 +677,13 @@ void VulkanEngine::CreatePipeline()
 	vkDestroyShaderModule(_device, shaderStages[0].module, nullptr);
 	vkDestroyShaderModule(_device, shaderStages[1].module, nullptr);
 
+
+	_resources.PushFunction([=]
+		{
+			vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
+			vkDestroyPipeline(_device, _pipeline, nullptr);
+		});
+
 }
 
 void VulkanEngine::SetupDepthStencil()
@@ -708,6 +728,13 @@ void VulkanEngine::SetupDepthStencil()
 	depthStencilViewCI.subresourceRange.layerCount = 1;
 	depthStencilViewCI.image = _depthStencil.image;
 	VK_CHECK(vkCreateImageView(_device, &depthStencilViewCI, nullptr, &_depthStencil.view));
+
+	_resources.PushFunction([=]
+		{
+			vkDestroyImage(_device, _depthStencil.image, nullptr);
+			vkDestroyImageView(_device, _depthStencil.view, nullptr);
+			vkFreeMemory(_device, _depthStencil.memory, nullptr);
+		});
 }
 
 void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
@@ -735,7 +762,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 
 }
 
-void VulkanEngine::init_imgui()
+void VulkanEngine::InitImgui()
 {
 	// creating descriptor pool for imgui
 	VkDescriptorPoolSize pool_sizes[] =
@@ -761,8 +788,7 @@ void VulkanEngine::init_imgui()
 	pool_info.poolSizeCount = (uint32_t)std::size(pool_sizes);
 	pool_info.pPoolSizes = pool_sizes;
 
-	VkDescriptorPool imguiPool;
-	VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr, &imguiPool));
+	VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr, &_imguiPool));
 
 	// INITIALIZING IMGUI LIB
 	ImGui::CreateContext();
@@ -774,7 +800,7 @@ void VulkanEngine::init_imgui()
 	init_info.PhysicalDevice = _chosenDevice;
 	init_info.Device = _device;
 	init_info.Queue = _graphicsQueue;
-	init_info.DescriptorPool = imguiPool;
+	init_info.DescriptorPool = _imguiPool;
 	init_info.MinImageCount = 3;
 	init_info.ImageCount = 3;
 	init_info.UseDynamicRendering = true;
@@ -787,9 +813,10 @@ void VulkanEngine::init_imgui()
 
 	ImGui_ImplVulkan_Init(&init_info);
 	ImGui_ImplVulkan_CreateFontsTexture();
+
 }
 
-void VulkanEngine::draw_imgui(VkCommandBuffer cmdBuffer, VkImageView targetImageView)
+void VulkanEngine::DrawImgui(VkCommandBuffer cmdBuffer, VkImageView targetImageView)
 {
 	VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(targetImageView,
 		nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -800,6 +827,14 @@ void VulkanEngine::draw_imgui(VkCommandBuffer cmdBuffer, VkImageView targetImage
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer);
 
 	vkCmdEndRendering(cmdBuffer);
+}
+
+void VulkanEngine::DestroyImgui()
+{
+	ImGui_ImplVulkan_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+	vkDestroyDescriptorPool(_device, _imguiPool, nullptr);
 }
 
 void VulkanEngine::SetupExternalVulkanStructures()
@@ -814,7 +849,7 @@ void VulkanEngine::SetupDescriptor()
 	_globalDescriptor.DescriptorBasicSetup();
 	_globalDescriptor.UpdateUBOBindings(_uniformBuffers, _globalDescriptor.GetDescriptorSet());
 	_globalDescriptor.UpdateBindlessBindings(_globalDescriptor.GetDescriptorSet(),
-		_mesh.GetTextures(), _mesh.GetTextures().size(), _mesh.GetSampler());
+		_mesh.GetModels().textures, _mesh.GetModels().textures.size(), _mesh.GetSampler());
 }
 
 
