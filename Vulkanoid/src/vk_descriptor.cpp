@@ -2,41 +2,18 @@
 #include "../headers/vk_initializers.h"
 
 
-void Descriptor::DescriptorBasicSetup()
+void Descriptor::DescriptorBasicSetup(uint32_t descriptorCount)
 {
-	AllocatePool();
-	_setLayout = CreateBindlessDescriptorLayout();
-	_descSet = AllocateBindlessSet(_setLayout);
+	_setLayout = CreateBindlessDescriptorLayout(descriptorCount);
+	_descSet = AllocateBindlessSet(_setLayout, descriptorCount);
 }
-
 
 void Descriptor::Cleanup()
 {
 	_resources.FlushQueue();
 }
 
-void Descriptor::AllocatePool()
-{
-	VkDescriptorPoolSize descriptorTypeCounts[]{
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxBindlessResources},
-		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1} };
-	
-
-	VkDescriptorPoolCreateInfo descriptorPoolCI{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-	descriptorPoolCI.poolSizeCount = 1;
-	descriptorPoolCI.pPoolSizes = descriptorTypeCounts;
-	descriptorPoolCI.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT; // for bindless
-	// set max number of descriptor sets that can be requested from this pool
-	descriptorPoolCI.maxSets = maxBindlessResources;
-	VK_CHECK(vkCreateDescriptorPool(_device, &descriptorPoolCI, nullptr, &_pool));
-
-	_resources.PushFunction([=]
-		{
-			vkDestroyDescriptorPool(_device, _pool, nullptr);
-		});
-}
-
-VkDescriptorSetLayout Descriptor::CreateBindlessDescriptorLayout()
+VkDescriptorSetLayout Descriptor::CreateBindlessDescriptorLayout(uint32_t descriptorCount)
 {
 	VkDescriptorBindingFlags bindlessFlags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
 		VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT; // could be used only for last binding in set layout,
@@ -49,8 +26,8 @@ VkDescriptorSetLayout Descriptor::CreateBindlessDescriptorLayout()
 	layoutBinding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	
 	layoutBinding[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	layoutBinding[1].descriptorCount = maxBindlessResources;
-	layoutBinding[1].binding = 1;
+	layoutBinding[1].descriptorCount = descriptorCount;
+	layoutBinding[1].binding = 1;	
 	layoutBinding[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	VkDescriptorSetLayoutCreateInfo descriptorLayoutCI{
@@ -71,8 +48,26 @@ VkDescriptorSetLayout Descriptor::CreateBindlessDescriptorLayout()
 	return setLayout;
 }
 
-VkDescriptorSet Descriptor::AllocateBindlessSet(VkDescriptorSetLayout layout)
+VkDescriptorSet Descriptor::AllocateBindlessSet(VkDescriptorSetLayout layout, uint32_t descriptorCount)
 {
+	VkDescriptorPoolSize descriptorTypeCounts[]{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1}, // bind 0
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptorCount} }; // bind 1
+
+	VkDescriptorPoolCreateInfo descriptorPoolCI{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+	descriptorPoolCI.poolSizeCount = 2;
+	descriptorPoolCI.pPoolSizes = descriptorTypeCounts;
+	descriptorPoolCI.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT; // for bindless
+	// set max number of descriptor sets that can be requested from this pool
+	descriptorPoolCI.maxSets = 1;
+	VK_CHECK(vkCreateDescriptorPool(_device, &descriptorPoolCI, nullptr, &_pool));
+
+
+	_resources.PushFunction([=]
+		{
+			vkDestroyDescriptorPool(_device, _pool, nullptr);
+		});
+
 	VkDescriptorSetAllocateInfo allocInfo{ .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 	allocInfo.pNext = nullptr;
 	allocInfo.descriptorPool = _pool;
@@ -80,10 +75,9 @@ VkDescriptorSet Descriptor::AllocateBindlessSet(VkDescriptorSetLayout layout)
 	allocInfo.pSetLayouts = &layout;
 
 	VkDescriptorSetVariableDescriptorCountAllocateInfo countInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO };
-	uint32_t maxBinding = 1;
 	countInfo.descriptorSetCount = 1;
 	// max allocate number
-	countInfo.pDescriptorCounts = &maxBinding;
+	countInfo.pDescriptorCounts = &descriptorCount;
 
 	allocInfo.pNext = &countInfo;
 
@@ -161,16 +155,21 @@ void Descriptor::UpdateUBOBindings(std::array<UniformBuffer, MAX_CONCURRENT_FRAM
 
 // to do: refactor
 void Descriptor::UpdateBindlessBindings(VkDescriptorSet dstSet, 
-	const std::vector<VulkanImage>& images, uint32_t texturePathsSize, VkSampler sampler)
+	const std::map<uint32_t, VulkanImage>& images, VkSampler sampler)
 {
-	for (uint32_t i = 0; i < texturePathsSize; ++i)
+	assert(images.size() > 0, "Unordered map of textures is empty!");
+	assert(sampler != VK_NULL_HANDLE, "Sampler is not created!");
+
+	uint32_t i = 1; // 0 is empty texture
+	for (const auto& image : images)
 	{
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.sampler = sampler;
-		imageInfo.imageView = images[i].view;
+		imageInfo.imageView = image.second.view;
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 
+	
 		VkWriteDescriptorSet writeDescSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 		writeDescSet.dstSet = dstSet;
 		writeDescSet.dstBinding = 1;
@@ -180,6 +179,8 @@ void Descriptor::UpdateBindlessBindings(VkDescriptorSet dstSet,
 		writeDescSet.pImageInfo = &imageInfo;
 		
 		vkUpdateDescriptorSets(_device, 1, &writeDescSet, 0, VK_NULL_HANDLE);
+
+		++i;
 	}
 }
 

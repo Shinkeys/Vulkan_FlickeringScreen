@@ -11,6 +11,8 @@ layout (set = 0, binding = 0) uniform UBO
 	mat4 projectionMatrix;
 } ubo;
 
+
+
 out gl_PerVertex
 {
 	vec4 gl_Position;
@@ -18,7 +20,7 @@ out gl_PerVertex
 
 struct VSOutput
 {
-	vec2 uvCoords;
+	vec2 out_uvCoords;
 };
 
 layout (location = 0) out VSOutput VSOut;
@@ -26,5 +28,5 @@ layout (location = 0) out VSOutput VSOut;
 void main() 
 {
 	gl_Position = ubo.projectionMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(inPos.xyz, 1.0);
-	VSOut.uvCoords = inTexCoord;
+	VSOut.out_uvCoords = inTexCoord;
 }

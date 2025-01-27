@@ -30,15 +30,23 @@ struct ModelDescriptor
 	std::vector<uint32_t> indices;
 	std::vector<uint32_t> meshIndexOffset;
 	std::vector<uint32_t> currentMeshVertices;
-	std::vector<VulkanImage> textures;
+	std::map<uint32_t, VulkanImage> textures;
+
+	std::vector<PushConstant> textureIds;
 };
 
 
+struct PipelineStates
+{
+	bool pushContstants{ false };
+};
 
 class VulkanMesh
 {
 private:
 	ResourceManager _resources;
+	PipelineStates _states;
+
 
 	VkDevice _device;
 	VkPhysicalDevice _physicalDevice;
@@ -69,12 +77,13 @@ private:
 
 
 public:
+	const VulkanoidOperations GetOperations() const;
 	void Cleanup();
 	
 	const ModelDescriptor& GetModels() const { return _modelDesc; }
 
 	const VkSampler GetSampler() const { return _sampler; }
-	void DrawMeshes(VkCommandBuffer cmd);
+	void DrawMeshes(VkCommandBuffer cmd, VkPipelineLayout layout);
 	void CreateBuffers();
 	void SetStructures(VkDevice device, VkPhysicalDevice physDevice, 
 		VkCommandPool commandPool, VkQueue queue);

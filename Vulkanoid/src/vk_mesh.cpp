@@ -21,6 +21,11 @@ void VulkanMesh::SetStructures(VkDevice device,
 		LoadModel(paths[i]);
 	}
 
+	// to do: more pipeline states and separate func
+	if (_modelDesc.textures.size() >= 1)
+	{
+		_states.pushContstants = true;
+	}
 
 	_sampler = vkutil::CreateSampler(_device);
 	_resources.PushFunction([=]
@@ -101,16 +106,23 @@ VulkanImage VulkanMesh::StbiLoadTexture(const char* fileName)
 	else return {};
 }
 
-void VulkanMesh::DrawMeshes(VkCommandBuffer cmd)
+void VulkanMesh::DrawMeshes(VkCommandBuffer cmd, VkPipelineLayout layout)
 {
 	VkDeviceSize offsets[1]{ 0 };
 	vkCmdBindVertexBuffers(cmd, 0, 1, &_geometryBuffers.vertices.handle, offsets);
 	vkCmdBindIndexBuffer(cmd, _geometryBuffers.indices.handle, 0, VK_INDEX_TYPE_UINT32);
 	// Draw indexed triangle
+
 	for (uint32_t i = 0; i < _geometryBuffers.modelCount; ++i)
 	{
 		const uint32_t offset = _modelDesc.meshIndexOffset[i];
+		if (_states.pushContstants)
+		{
+			vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &_modelDesc.textureIds[i]);
+		}
+
 		vkCmdDrawIndexed(cmd, _modelDesc.currentMeshVertices[i], 1, offset, 0, 0);
+
 	}
 }
 
@@ -278,9 +290,12 @@ void VulkanMesh::ProcessMaterial(aiMaterial* material, std::array<aiTextureType,
 	Texture textures{};
 	// need it when loading a lot of models, for example 10 models
 	// id should be unique for every texture
-	static uint32_t offset = 0;
+	static uint32_t offset = 1;
 
 	const std::filesystem::path textureFolder = "objects/models/";
+	std::pair<uint32_t, VulkanImage> textureDesc;
+
+	PushConstant textureIds;
 	for (uint32_t i = 0; i < textureTypes.size(); ++i)
 	{
 		const uint32_t currentTextureCount = material->GetTextureCount(textureTypes[i]);
@@ -292,12 +307,27 @@ void VulkanMesh::ProcessMaterial(aiMaterial* material, std::array<aiTextureType,
 			textures.id = j + offset;
 			textures.path = std::filesystem::absolute(textureFolder / str.C_Str());
 
-			std::cout << textures.path << "\n";
+			std::cout << "Texture path: " << textures.path << "\n";
+
+			const uint32_t id = textures.id;
+			textureDesc = std::make_pair(id, StbiLoadTexture(textures.path.string().c_str()));
+
+			_modelDesc.textures.insert(textureDesc);
+
+			switch (textureTypes[i])
+			{
+			case aiTextureType_DIFFUSE: textureIds.diffuseId = textures.id; break;
+			case aiTextureType_SPECULAR: textureIds.specularId = textures.id; break;
+			case aiTextureType_EMISSIVE: textureIds.emissiveId = textures.id; break;
+			case aiTextureType_HEIGHT: textureIds.normalId = textures.id; break;
+			}
+
 		}
 		offset += static_cast<uint32_t>(currentTextureCount);
 	}
 
-	_modelDesc.textures.push_back(StbiLoadTexture(textures.path.string().c_str()));
+	_modelDesc.textureIds.push_back(textureIds);
+	
 }
 
 void VulkanMesh::ProcessNode(aiNode* node, const aiScene* scene)
@@ -318,11 +348,26 @@ void VulkanMesh::ProcessNode(aiNode* node, const aiScene* scene)
 std::vector<std::filesystem::path> VulkanMesh::FillVectorOfPaths()
 {
 	std::vector<std::filesystem::path> pathsToModels;
-	std::filesystem::path model1 = "objects/models/blacksmith/scene.gltf";
+	std::filesystem::path model1 = "objects/models/character.obj";
 	pathsToModels.push_back(model1);
-	/*std::filesystem::path model2 = "objects/models/character.obj";
-	pathsToModels.push_back(model2);*/
+	std::filesystem::path model2 = "objects/models/stoneGround.obj";
+	pathsToModels.push_back(model2);
+	std::filesystem::path model3 = "objects/models/scene.gltf";
+	pathsToModels.push_back(model3);
+
 
 
 	return pathsToModels;
+}
+
+const VulkanoidOperations VulkanMesh::GetOperations() const
+{
+	VulkanoidOperations result = VulkanoidOperations::NONE;
+
+	if (_states.pushContstants)
+	{
+		result |= VulkanoidOperations::VULKANOID_USE_CONSTANTS;
+	}
+
+	return result;
 }

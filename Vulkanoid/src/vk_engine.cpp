@@ -38,10 +38,10 @@ void VulkanEngine::init()
 	PassVulkanStructures();
 	SetupExternalVulkanStructures();
 
+
 	SetupDescriptor();
 
 	CreatePipeline();
-
 	InitImgui();
 
 
@@ -86,6 +86,7 @@ void VulkanEngine::init_vulkan()
 	features12.descriptorBindingPartiallyBound = VK_TRUE;
 	features12.runtimeDescriptorArray = VK_TRUE;
 	features12.descriptorIndexing = VK_TRUE;
+	features12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
 
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
 	vkb::PhysicalDevice physDevice{ selector
@@ -343,7 +344,7 @@ void VulkanEngine::draw()
 		static_cast<float>(_windowManager->GetWindowHeight()), 0.1f, 100.0f);
 	glm::mat4 view = _camera.GetLookToMatrix();
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::scale(model, glm::vec3(0.1f));
+	/*model = glm::scale(model, glm::vec3(0.1f));*/
 
 	shaderData.projMatrix = projection;
 	shaderData.viewMatrix = view;
@@ -442,7 +443,7 @@ void VulkanEngine::draw()
 	// The pipeline (state object) contains all states of the rendering pipeline, binding it will set all the states specified at pipeline creation time
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 	// Bind triangle vertex buffer (contains position and colors)
-	_mesh.DrawMeshes(cmd);
+	_mesh.DrawMeshes(cmd, _pipelineLayout);
 	// Finish the current dynamic rendering section
 	vkCmdEndRendering(cmd);
 
@@ -539,9 +540,19 @@ void VulkanEngine::CreatePipeline()
 	computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	computeLayout.pSetLayouts = &descLayout;
 	computeLayout.setLayoutCount = 1;
+	// push consts
+	if (_mesh.GetOperations() & VulkanoidOperations::VULKANOID_USE_CONSTANTS)
+	{
+		VkPushConstantRange constRange{};
+		constRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		constRange.offset = 0;
+		constRange.size = sizeof(PushConstant);
+		computeLayout.pPushConstantRanges = &constRange;
+		computeLayout.pushConstantRangeCount = 1;
+	}
+
 	VK_CHECK(vkCreatePipelineLayout(_device, &computeLayout, nullptr, &_pipelineLayout));
-
-
+	 
 	VkGraphicsPipelineCreateInfo pipelineCI{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 	pipelineCI.layout = _pipelineLayout;
 
@@ -846,10 +857,10 @@ void VulkanEngine::SetupExternalVulkanStructures()
 
 void VulkanEngine::SetupDescriptor()
 {
-	_globalDescriptor.DescriptorBasicSetup();
+	_globalDescriptor.DescriptorBasicSetup(_mesh.GetModels().textures.size() + 1);
 	_globalDescriptor.UpdateUBOBindings(_uniformBuffers, _globalDescriptor.GetDescriptorSet());
 	_globalDescriptor.UpdateBindlessBindings(_globalDescriptor.GetDescriptorSet(),
-		_mesh.GetModels().textures, _mesh.GetModels().textures.size(), _mesh.GetSampler());
+		_mesh.GetModels().textures, _mesh.GetSampler());
 }
 
 

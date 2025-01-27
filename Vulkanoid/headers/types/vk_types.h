@@ -8,6 +8,7 @@
 #include "../vendor/glm/glm/glm.hpp"
 
 #include <iostream>
+#include <map>
 
 //we will add our main reusable types here
 
@@ -79,3 +80,32 @@ constexpr unsigned int MAX_CONCURRENT_FRAMES = 2;
 		}                                                           \
 	} while (0)
 
+
+
+
+
+enum class VulkanoidOperations
+{
+	NONE = 0x00000000,
+	VULKANOID_USE_CONSTANTS = 0x00000001,
+};
+
+// TO DO: push array of textures with getting id in the shader
+struct PushConstant
+{
+	uint32_t diffuseId{0};
+	uint32_t specularId{0};
+	uint32_t emissiveId{0};
+	uint32_t normalId{0};
+};
+
+inline VulkanoidOperations& operator|=(VulkanoidOperations& operationF, VulkanoidOperations operationS)
+{
+	operationF = static_cast<VulkanoidOperations>(static_cast<int>(operationF) | static_cast<int>(operationS));
+	return operationF;
+}
+
+inline bool operator&(VulkanoidOperations operationF, VulkanoidOperations operationS)
+{
+	return static_cast<bool>(static_cast<int>(operationF) & static_cast<int>(operationS));
+}

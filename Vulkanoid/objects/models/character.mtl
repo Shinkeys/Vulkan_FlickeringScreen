@@ -7,9 +7,9 @@ Ka 1.000000 1.000000 1.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\Users\Sasha\Desktop\Vulkan_FlickeringScreen\Vulkanoid\objects\models\textures\manetje_1_burh_color.tga.png
-map_Ks C:\Users\Sasha\Desktop\Vulkan_FlickeringScreen\Vulkanoid\objects\models\textures\emmision_mp_burh_color.tga.png
-map_Ke C:\Users\Sasha\Desktop\Vulkan_FlickeringScreen\Vulkanoid\objects\models\textures\Emmision__color.tga.png
+map_Kd textures/manetje_1_burh_color.tga.png
+map_Ks textures/emmision_mp_burh_color.tga.png
+map_Ke textures/Emmision__color.tga.png
 
 newmtl wapen
 Ns 250.000000
@@ -19,6 +19,6 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd C:\Users\Sasha\Desktop\Vulkan_FlickeringScreen\Vulkanoid\objects\models\textures\hellenbaart__color.tga.png
-map_Bump C:\Users\Sasha\Desktop\Vulkan_FlickeringScreen\Vulkanoid\objects\models\textures\smoke.png
+map_Kd textures/hellenbaart__color.tga.png
+map_Bump textures/smoke.png
 #end
