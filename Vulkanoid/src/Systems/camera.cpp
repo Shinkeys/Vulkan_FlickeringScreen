@@ -18,11 +18,11 @@ void Camera::CalculateKeyboard()
 	lastFrame = currentFrame;
 	if (_window->GetKeysState().left)
 	{
-		_position -= glm::normalize(_right) * deltaTime;
+		_position += glm::normalize(_right) * deltaTime;
 	}
 	if (_window->GetKeysState().right)
 	{
-		_position += glm::normalize(_right) * deltaTime;
+		_position -= glm::normalize(_right) * deltaTime;
 	}
 	// z axis is reversed in vulkan
 	if (_window->GetKeysState().front)
@@ -51,7 +51,7 @@ void Camera::CalculateDirection()
 
 
 		rotation = glm::rotate(rotation, -yaw, _up);
-		rotation = glm::rotate(rotation, pitch, _right);
+		rotation = glm::rotate(rotation, -pitch, _right);
 	}
 	_direction = glm::normalize(glm::mat3(rotation) * _direction);
 	_up = glm::normalize(glm::mat3(rotation) * _up);

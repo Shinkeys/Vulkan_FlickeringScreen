@@ -66,6 +66,9 @@
     <ClCompile Include="src\vk_mesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Systems\imgui_helper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\vk_engine.h">
@@ -128,7 +131,7 @@
     <ClInclude Include="headers\systems\camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="headers\window.h">
+    <ClInclude Include="headers\systems\window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="headers\types\VertexTypes.h">
@@ -140,9 +143,11 @@
     <ClInclude Include="headers\vk_resources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="headers\systems\imgui_helper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\gradient.comp" />
     <None Include="shaders\main.vert" />
     <None Include="shaders\main.frag" />
     <None Include="scripts\build.bat">

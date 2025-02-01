@@ -350,9 +350,9 @@ std::vector<std::filesystem::path> VulkanMesh::FillVectorOfPaths()
 	std::vector<std::filesystem::path> pathsToModels;
 	std::filesystem::path model1 = "objects/models/character.obj";
 	pathsToModels.push_back(model1);
-	std::filesystem::path model2 = "objects/models/stoneGround.obj";
-	pathsToModels.push_back(model2);
-	std::filesystem::path model3 = "objects/models/scene.gltf";
+	/*std::filesystem::path model2 = "objects/models/stoneGround.obj";
+	pathsToModels.push_back(model2);*/
+	std::filesystem::path model3 = "objects/models/ground.obj";
 	pathsToModels.push_back(model3);
 
 
@@ -362,7 +362,7 @@ std::vector<std::filesystem::path> VulkanMesh::FillVectorOfPaths()
 
 const VulkanoidOperations VulkanMesh::GetOperations() const
 {
-	VulkanoidOperations result = VulkanoidOperations::NONE;
+	VulkanoidOperations result = VulkanoidOperations::VULKANOID_NONE;
 
 	if (_states.pushContstants)
 	{

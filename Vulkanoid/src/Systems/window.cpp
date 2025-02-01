@@ -1,4 +1,4 @@
-#include "../../headers/window.h"
+#include "../../headers/systems/window.h"
 
 
 void Window::ProceedKeys(int key)
@@ -19,6 +19,16 @@ void Window::ProceedKeys(int key)
 	{
 		_keys.right = true;
 	}
+}
+
+VulkanoidOperations Window::HandleResize()
+{
+	if (_resize)
+	{
+		_resize = false;
+		return VulkanoidOperations::VULKANOID_RESIZE_SWAPCHAIN;
+	}
+	else return VulkanoidOperations::VULKANOID_NONE;
 }
 
 void Window::ProceedMouseMovement(double xPos, double yPos)
@@ -63,6 +73,7 @@ void Window::InitializeGLFW()
 
 	glfwSetKeyCallback(_window, KeyCallbackGLFW);
 	glfwSetCursorPosCallback(_window, CursorCallbackGLFW);
+	glfwSetFramebufferSizeCallback(_window, FramebufferSizeCallbackGLFW);
 }
 
 void Window::ResetKey(int key)
@@ -92,9 +103,15 @@ void Window::KeyCallbackGLFW(GLFWwindow* window, int key, int scancode, int acti
 	{
 		app->ResetKey(key);
 	}
-
-
 }
+void Window::FramebufferSizeCallbackGLFW(GLFWwindow* window, int width, int height)
+{
+	Window* app = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+	app->_width = width;
+	app->_height = height;
+	app->_resize = true;
+}
+
 void Window::CreateWindowSurface(VkInstance instance, VkSurfaceKHR* surface)
 {
 	////////

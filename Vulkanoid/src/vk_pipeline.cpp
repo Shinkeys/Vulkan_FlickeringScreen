@@ -211,7 +211,7 @@ void vkutil::TransitionImage(VkCommandBuffer cmd, VkImage image,
 	VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
 	VkImageSubresourceRange subresourceRange)
 {
-	VkImageMemoryBarrier imageMemoryBarrier = vkinit::imageMemoryBarrier();
+	VkImageMemoryBarrier imageMemoryBarrier = vkinit::ImageMemoryBarrier();
 	imageMemoryBarrier.srcAccessMask = srcAccessMask;
 	imageMemoryBarrier.dstAccessMask = dstAccessMask;
 	imageMemoryBarrier.oldLayout = currentLayout;
@@ -230,7 +230,7 @@ void vkutil::TransitionImage(VkCommandBuffer cmd, VkImage image,
 }
 
 
-void vkutil::copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination,
+void vkutil::CopyImgToImg(VkCommandBuffer cmd, VkImage source, VkImage destination,
 	VkExtent2D srcSize, VkExtent2D destSize)
 {
 	VkImageBlit2 blitRegion{ .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr };

@@ -7,8 +7,9 @@
 #include "vk_descriptor.h"
 #include "vk_pipelines.h"
 #include "vk_tools.h"
-#include "window.h"
+#include "systems/window.h"
 #include "systems/camera.h"
+#include "systems/imgui_helper.h"
 #include "vk_mesh.h"
 
 
@@ -67,7 +68,7 @@ public:
 	// setting up commands pool to send it to VkQueue later. VkCommandPool -> VkCommandBuffer -> VkQueue
 	FrameData _frames[MAX_CONCURRENT_FRAMES];
 
-	FrameData& get_current_frame() { return _frames[_frameNumber % MAX_CONCURRENT_FRAMES]; };
+	FrameData& GetCurrentFrame() { return _frames[_frameNumber % MAX_CONCURRENT_FRAMES]; };
 
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
@@ -88,11 +89,6 @@ public:
 	std::vector<VkImageView> _swapchainImagesView;
 	VkExtent2D _swapchainExtent;
 
-	VmaAllocator _allocator;
-
-	// allocation for image
-	AllocatedImage _drawImage;
-	VkExtent2D _drawExtent;
 
 	VkFormat _depthFormat;
 	DepthStencil _depthStencil;
@@ -112,27 +108,28 @@ private:
 	std::unique_ptr<Window> _windowManager = std::make_unique<Window>();
 	Camera _camera{ _windowManager.get()};
 	VulkanMesh _mesh;
+	ImguiHelper _imguiHelper;
+
+	VulkanoidOperations _operations;
 	
-	void init_vulkan();
-	void init_swapchain();
-	void init_commands();
-	void init_sync_structures();
+	void InitVulkan();
+	void InitSwapchain();
+	void InitCommands();
+	void InitSyncStructures();
 
 	// swapchain //
-	void create_swapchain(uint32_t width, uint32_t height);
-	void destroy_swapchain();
+	void CreateSwapchain(uint32_t width, uint32_t height);
+	void DestroySwapchain();
+	void UpdateSwapchain();
 
 	// pipelines
 	void CreatePipeline();
 
 	void PassVulkanStructures();
 
-	void InitImgui();
-	void DrawImgui(VkCommandBuffer cmdBuffer, VkImageView targetImageView);
-	void DestroyImgui();
-	VkDescriptorPool _imguiPool;
 
 	void SetupDepthStencil();
+	void DestroyDepthStencil();
 
 	struct Vertex
 	{
@@ -143,7 +140,6 @@ private:
 
 	Descriptor _globalDescriptor;
 
-	uint32_t indexCount;
 
 	// one ubo per frame, so we can have overframe overlap to be sure uniforms arent updated while still in use
 	std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> _uniformBuffers;

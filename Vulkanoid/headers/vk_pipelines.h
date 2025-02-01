@@ -37,7 +37,7 @@ namespace vkutil
 		VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
 		VkImageSubresourceRange subresourceRange);
 
-	void copy_image_to_image(VkCommandBuffer cmd, VkImage source, VkImage destination,
+	void CopyImgToImg(VkCommandBuffer cmd, VkImage source, VkImage destination,
 		VkExtent2D srcSize, VkExtent2D destSize);
 
 	std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> CreateUniformBuffers(VkDevice device, VkPhysicalDevice physDevice);

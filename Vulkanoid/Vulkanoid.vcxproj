@@ -165,6 +165,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Systems\camera.cpp" />
+    <ClCompile Include="src\Systems\imgui_helper.cpp" />
     <ClCompile Include="src\Systems\window.cpp" />
     <ClCompile Include="src\vk_mesh.cpp" />
     <ClCompile Include="src\vk_tools.cpp" />
@@ -184,10 +185,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\systems\camera.h" />
+    <ClInclude Include="headers\systems\imgui_helper.h" />
     <ClInclude Include="headers\types\VertexTypes.h" />
     <ClInclude Include="headers\vk_mesh.h" />
     <ClInclude Include="headers\vk_resources.h" />
-    <ClInclude Include="headers\window.h" />
+    <ClInclude Include="headers\systems\window.h" />
     <ClInclude Include="headers\vk_descriptor.h" />
     <ClInclude Include="headers\vk_engine.h" />
     <ClInclude Include="headers\vk_initializers.h" />
@@ -210,7 +212,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="scripts\build.bat" />
-    <None Include="shaders\gradient.comp" />
     <None Include="shaders\main.frag" />
     <None Include="shaders\main.vert" />
   </ItemGroup>

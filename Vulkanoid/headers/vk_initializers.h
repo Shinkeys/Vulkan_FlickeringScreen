@@ -7,22 +7,22 @@
 
 namespace vkinit
 {
-	VkCommandPoolCreateInfo command_pool_create_info(uint32_t queueFamilyIndex,
+	VkCommandPoolCreateInfo CommandPoolCreateInfo(uint32_t queueFamilyIndex,
 		VkCommandPoolCreateFlags flags = 0);
 	VkCommandBufferAllocateInfo CommandBufferAllocateInfo(
 		VkCommandPool pool, uint32_t count = 1);
 
-	VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags = 0);
+	VkFenceCreateInfo FenceCreateInfo(VkFenceCreateFlags flags = 0);
 
-	VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags = 0);
+	VkSemaphoreCreateInfo SemaphoreCreateInfo(VkSemaphoreCreateFlags flags = 0);
 
-	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags = 0);
+	VkCommandBufferBeginInfo CommandBufferCreateInfo(VkCommandBufferUsageFlags flags = 0);
 
-	VkImageSubresourceRange image_subresource_range(VkImageAspectFlags aspectMask);
+	VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags aspectMask);
 
-	VkSemaphoreSubmitInfo semaphore_submit_info(VkPipelineStageFlags2 stageMask, VkSemaphore semaphore);
-	VkCommandBufferSubmitInfo command_buffer_submit_info(VkCommandBuffer cmd);
-	VkSubmitInfo2 submit_info(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSubmitInfo* signalSemaphoreInfo,
+	VkSemaphoreSubmitInfo SemaphoreSubmitInfo(VkPipelineStageFlags2 stageMask, VkSemaphore semaphore);
+	VkCommandBufferSubmitInfo CommandBufferSubmitInfo(VkCommandBuffer cmd);
+	VkSubmitInfo2 SubmitInfo(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSubmitInfo* signalSemaphoreInfo,
 		VkSemaphoreSubmitInfo* waitSemaphoreInfo);
 
 	// image creation
@@ -30,9 +30,9 @@ namespace vkinit
 	VkImageViewCreateInfo ImageViewCreateInfo(VkFormat format, VkImage image, VkImageAspectFlags aspectFlags);
 
 	// for imgui
-	VkRenderingAttachmentInfo attachment_info(
+	VkRenderingAttachmentInfo AttachmentInfo(
 		VkImageView view, VkClearValue* clear, VkImageLayout layout);
-	VkRenderingInfo rendering_info(
+	VkRenderingInfo RenderingInfo(
 		VkExtent2D extent, VkRenderingAttachmentInfo* colorAttachment, VkRenderingAttachmentInfo* depthAttachment);
-	VkImageMemoryBarrier imageMemoryBarrier();
+	VkImageMemoryBarrier ImageMemoryBarrier();
 }

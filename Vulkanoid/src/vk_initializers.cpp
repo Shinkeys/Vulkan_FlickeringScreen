@@ -1,6 +1,6 @@
 #include "../headers/vk_initializers.h"
 
-VkCommandPoolCreateInfo vkinit::command_pool_create_info(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags /*= 0*/)
+VkCommandPoolCreateInfo vkinit::CommandPoolCreateInfo(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags /*= 0*/)
 {
 	VkCommandPoolCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -23,7 +23,7 @@ VkCommandBufferAllocateInfo vkinit::CommandBufferAllocateInfo(VkCommandPool pool
 	return info;
 }
 
-VkFenceCreateInfo vkinit::fence_create_info(VkFenceCreateFlags flags /*= 0*/)
+VkFenceCreateInfo vkinit::FenceCreateInfo(VkFenceCreateFlags flags /*= 0*/)
 {
 	VkFenceCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -33,7 +33,7 @@ VkFenceCreateInfo vkinit::fence_create_info(VkFenceCreateFlags flags /*= 0*/)
 	return info;
 }
 
-VkSemaphoreCreateInfo vkinit::semaphore_create_info(VkSemaphoreCreateFlags flags /*= 1*/)
+VkSemaphoreCreateInfo vkinit::SemaphoreCreateInfo(VkSemaphoreCreateFlags flags /*= 1*/)
 {
 	VkSemaphoreCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -43,7 +43,7 @@ VkSemaphoreCreateInfo vkinit::semaphore_create_info(VkSemaphoreCreateFlags flags
 	return info;
 }
 
-VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageFlags flags /*= 0*/)
+VkCommandBufferBeginInfo vkinit::CommandBufferCreateInfo(VkCommandBufferUsageFlags flags /*= 0*/)
 {
 	VkCommandBufferBeginInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -54,7 +54,7 @@ VkCommandBufferBeginInfo vkinit::command_buffer_begin_info(VkCommandBufferUsageF
 	return info;
 }
 
-VkImageSubresourceRange vkinit::image_subresource_range(VkImageAspectFlags aspectMask)
+VkImageSubresourceRange vkinit::ImageSubresourceRange(VkImageAspectFlags aspectMask)
 {
 	VkImageSubresourceRange subImage{};
 	subImage.aspectMask = aspectMask;
@@ -66,7 +66,7 @@ VkImageSubresourceRange vkinit::image_subresource_range(VkImageAspectFlags aspec
 	return subImage;
 }
 
-VkSemaphoreSubmitInfo vkinit::semaphore_submit_info(VkPipelineStageFlags2 stageMask, VkSemaphore semaphore)
+VkSemaphoreSubmitInfo vkinit::SemaphoreSubmitInfo(VkPipelineStageFlags2 stageMask, VkSemaphore semaphore)
 {
 	VkSemaphoreSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -79,7 +79,7 @@ VkSemaphoreSubmitInfo vkinit::semaphore_submit_info(VkPipelineStageFlags2 stageM
 	return submitInfo;
 }
 
-VkCommandBufferSubmitInfo vkinit::command_buffer_submit_info(VkCommandBuffer cmd)
+VkCommandBufferSubmitInfo vkinit::CommandBufferSubmitInfo(VkCommandBuffer cmd)
 {
 	VkCommandBufferSubmitInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
@@ -90,7 +90,7 @@ VkCommandBufferSubmitInfo vkinit::command_buffer_submit_info(VkCommandBuffer cmd
 	return info;
 }
 
-VkSubmitInfo2 vkinit::submit_info(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSubmitInfo* signalSemaphoreInfo,
+VkSubmitInfo2 vkinit::SubmitInfo(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSubmitInfo* signalSemaphoreInfo,
 	VkSemaphoreSubmitInfo* waitSemaphoreInfo)
 {
 	VkSubmitInfo2 info = {};
@@ -155,7 +155,7 @@ VkImageViewCreateInfo vkinit::ImageViewCreateInfo(VkFormat format, VkImage image
 }
 
 // IMGUI
-VkRenderingAttachmentInfo vkinit::attachment_info(VkImageView view,
+VkRenderingAttachmentInfo vkinit::AttachmentInfo(VkImageView view,
 	VkClearValue* clear, VkImageLayout layout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */)
 {
 	VkRenderingAttachmentInfo colorAttachment{};
@@ -174,7 +174,7 @@ VkRenderingAttachmentInfo vkinit::attachment_info(VkImageView view,
 	return colorAttachment;
 }
 
-VkRenderingInfo vkinit::rendering_info(
+VkRenderingInfo vkinit::RenderingInfo(
 	VkExtent2D extent, VkRenderingAttachmentInfo* colorAttachment, VkRenderingAttachmentInfo* depthAttachment)
 {
 	VkRenderingInfo renderingInfo{};
@@ -191,7 +191,7 @@ VkRenderingInfo vkinit::rendering_info(
 	return renderingInfo;
 }
 
-VkImageMemoryBarrier vkinit::imageMemoryBarrier()
+VkImageMemoryBarrier vkinit::ImageMemoryBarrier()
 {
 	VkImageMemoryBarrier imageMemoryBarrier{};
 	imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;

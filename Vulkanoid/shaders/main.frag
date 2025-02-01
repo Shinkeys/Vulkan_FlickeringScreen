@@ -46,6 +46,6 @@ void main()
 	}
 
 
-	outFragColor = diffuse;
+	outFragColor = diffuse + specular;
 //	outFragColor = vec4(1.0);
 }

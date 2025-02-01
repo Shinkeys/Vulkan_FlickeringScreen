@@ -4,8 +4,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#include "../vendor/vma/vk_mem_alloc.h"
-#include "../vendor/glm/glm/glm.hpp"
+#include "../../vendor/glm/glm/glm.hpp"
 
 #include <iostream>
 #include <map>
@@ -35,7 +34,6 @@ struct AllocatedImage
 {
 	VkImage image;
 	VkImageView imageView;
-	VmaAllocation allocation;
 	VkExtent3D imageExtent;
 	VkFormat imageFormat;
 };
@@ -86,8 +84,9 @@ constexpr unsigned int MAX_CONCURRENT_FRAMES = 2;
 
 enum class VulkanoidOperations
 {
-	NONE = 0x00000000,
+	VULKANOID_NONE = 0x00000000,
 	VULKANOID_USE_CONSTANTS = 0x00000001,
+	VULKANOID_RESIZE_SWAPCHAIN = 0x00000002
 };
 
 // TO DO: push array of textures with getting id in the shader
