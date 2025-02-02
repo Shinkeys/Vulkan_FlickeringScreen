@@ -9,4 +9,5 @@ namespace vktool
 {
 	VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physDevice, VkFormat *depthFormat);
 	uint32_t GetMemoryTypeIndex(VkPhysicalDeviceMemoryProperties memoryProps, uint32_t typeBits, VkMemoryPropertyFlags properties);
+	uint32_t GetGraphicsFamilyIndex(VkPhysicalDevice physDevice);
 }

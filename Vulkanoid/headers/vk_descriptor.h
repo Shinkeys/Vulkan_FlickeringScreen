@@ -34,5 +34,5 @@ public:
 	void SetDevice(VkDevice device) { this->_device = device; }
 	void Cleanup();
 	void DescriptorBasicSetup(uint32_t descriptorCount);
-	void UpdateUBOBindings(std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> buffer, VkDescriptorSet dstSet);
+	void UpdateUBOBindings(std::array<UniformBuffer, g_MAX_CONCURRENT_FRAMES> buffer, VkDescriptorSet dstSet);
 };

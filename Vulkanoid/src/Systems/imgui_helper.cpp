@@ -35,8 +35,8 @@ void ImguiHelper::InitImgui(GLFWwindow* window, VkFormat swapchainImgFormat)
 	init_info.Device = _device;
 	init_info.Queue = _graphicsQueue;
 	init_info.DescriptorPool = _imguiPool;
-	init_info.MinImageCount = MAX_CONCURRENT_FRAMES;
-	init_info.ImageCount = MAX_CONCURRENT_FRAMES;
+	init_info.MinImageCount = g_MAX_CONCURRENT_FRAMES;
+	init_info.ImageCount = g_MAX_CONCURRENT_FRAMES;
 	init_info.UseDynamicRendering = true;
 
 	// dynamic rendering parameters

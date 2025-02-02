@@ -128,13 +128,13 @@ VkDescriptorSet Descriptor::AllocateSet(VkDescriptorSetLayout layout)
 	return descriptorSet;
 }
 
-void Descriptor::UpdateUBOBindings(std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> buffer, VkDescriptorSet dstSet)
+void Descriptor::UpdateUBOBindings(std::array<UniformBuffer, g_MAX_CONCURRENT_FRAMES> buffer, VkDescriptorSet dstSet)
 {
 	// update descriptor set determining the shader binding points
 		// for every binding point used in a shader there needs to be one
 		// desc matching that binding point
 
-	for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
+	for (uint32_t i = 0; i < g_MAX_CONCURRENT_FRAMES; ++i)
 	{
 		VkWriteDescriptorSet writeDescSet{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 

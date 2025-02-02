@@ -40,5 +40,5 @@ namespace vkutil
 	void CopyImgToImg(VkCommandBuffer cmd, VkImage source, VkImage destination,
 		VkExtent2D srcSize, VkExtent2D destSize);
 
-	std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> CreateUniformBuffers(VkDevice device, VkPhysicalDevice physDevice);
+	std::array<UniformBuffer, g_MAX_CONCURRENT_FRAMES> CreateUniformBuffers(VkDevice device, VkPhysicalDevice physDevice);
 }

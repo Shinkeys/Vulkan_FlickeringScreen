@@ -265,19 +265,19 @@ void vkutil::CopyImgToImg(VkCommandBuffer cmd, VkImage source, VkImage destinati
 	vkCmdBlitImage2(cmd, &blitInfo);
 }
 
-std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> vkutil::CreateUniformBuffers(VkDevice device, VkPhysicalDevice physDevice)
+std::array<UniformBuffer, g_MAX_CONCURRENT_FRAMES> vkutil::CreateUniformBuffers(VkDevice device, VkPhysicalDevice physDevice)
 {
 	VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 	bufferInfo.size = sizeof(ShaderData);
 	bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
-	std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> uniformBuffer;
+	std::array<UniformBuffer, g_MAX_CONCURRENT_FRAMES> uniformBuffer;
 
 	VkPhysicalDeviceMemoryProperties deviceMemoryProps;
 	vkGetPhysicalDeviceMemoryProperties(physDevice, &deviceMemoryProps);
 
 	// create the buffers
-	for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
+	for (uint32_t i = 0; i < g_MAX_CONCURRENT_FRAMES; ++i)
 	{
 		VK_CHECK(vkCreateBuffer(device, &bufferInfo, nullptr, &uniformBuffer[i].handle));
 

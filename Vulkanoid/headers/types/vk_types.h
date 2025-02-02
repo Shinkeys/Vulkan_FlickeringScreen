@@ -63,8 +63,9 @@ struct ShaderData
 };
 
 
-static int _frameNumber{ 0 };
-constexpr unsigned int MAX_CONCURRENT_FRAMES = 2;
+static int g_frameNumber{ 0 };
+constexpr unsigned int g_MAX_CONCURRENT_FRAMES = 2;
+constexpr uint32_t g_API_VERSION = VK_API_VERSION_1_3;
 
 // macro to check for Vulkan iteractions errors
 #define VK_CHECK(x)                                                 \
@@ -78,7 +79,14 @@ constexpr unsigned int MAX_CONCURRENT_FRAMES = 2;
 		}                                                           \
 	} while (0)
 
-
+namespace vkdebug
+{
+#ifdef NDEBUG
+	constexpr bool validationLayers = false;
+#else
+	constexpr bool validationLayers = true;
+#endif
+}
 
 
 

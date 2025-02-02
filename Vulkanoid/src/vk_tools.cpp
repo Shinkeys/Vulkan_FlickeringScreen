@@ -41,3 +41,21 @@ uint32_t vktool::GetMemoryTypeIndex(VkPhysicalDeviceMemoryProperties memoryProps
 	}
 	throw "Unable to find a suitable memory type";
 }
+
+uint32_t vktool::GetGraphicsFamilyIndex(VkPhysicalDevice physDevice)
+{
+	uint32_t queueFamilyCount{ 0 };
+	vkGetPhysicalDeviceQueueFamilyProperties(physDevice, &queueFamilyCount, nullptr);
+
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(physDevice, &queueFamilyCount, queueFamilies.data());
+	for (uint32_t i = 0; i < queueFamilyCount; ++i)
+	{
+		if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+		{
+			return i;
+		}
+	}
+
+	return VK_QUEUE_FAMILY_IGNORED;
+}

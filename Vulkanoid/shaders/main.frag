@@ -20,6 +20,7 @@ layout (push_constant) uniform PushConst
 	uint normalId;
 } pushConsts;
 
+
 void main() 
 {
 	vec4 diffuse = vec4(1.0, 1.0, 1.0, 1.0);

@@ -66,9 +66,9 @@ public:
 	 
 
 	// setting up commands pool to send it to VkQueue later. VkCommandPool -> VkCommandBuffer -> VkQueue
-	FrameData _frames[MAX_CONCURRENT_FRAMES];
+	FrameData _frames[g_MAX_CONCURRENT_FRAMES];
 
-	FrameData& GetCurrentFrame() { return _frames[_frameNumber % MAX_CONCURRENT_FRAMES]; };
+	FrameData& GetCurrentFrame() { return _frames[g_frameNumber % g_MAX_CONCURRENT_FRAMES]; };
 
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
@@ -76,7 +76,7 @@ public:
 	// VK settings //
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT _debug_messenger;
-	VkPhysicalDevice _chosenDevice;
+	VkPhysicalDevice _physDevice;
 	VkDevice _device; // device for commands
 	VkSurfaceKHR _surface; // window surface
 
@@ -142,12 +142,11 @@ private:
 
 
 	// one ubo per frame, so we can have overframe overlap to be sure uniforms arent updated while still in use
-	std::array<UniformBuffer, MAX_CONCURRENT_FRAMES> _uniformBuffers;
+	std::array<UniformBuffer, g_MAX_CONCURRENT_FRAMES> _uniformBuffers;
 
 
 	// for triangle
 	void SetupExternalVulkanStructures();
-	VkPhysicalDeviceMemoryProperties deviceMemoryProperties{};
 
 	void CleanBuffers();
 

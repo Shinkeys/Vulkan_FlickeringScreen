@@ -6,6 +6,7 @@
 #include "../headers/types/vk_types.h"
 #include "../headers/vk_initializers.h"
 #include "../headers/vk_pipelines.h"
+#include "../headers/vk_device.h"
 
 #include <iostream>
 #include <array>
@@ -43,73 +44,38 @@ void VulkanEngine::init()
 
 void VulkanEngine::PassVulkanStructures()
 {
-	_mesh.SetStructures(_device, _chosenDevice, _immediate._immediateCommandPool, _graphicsQueue);
+	_mesh.SetStructures(_device, _physDevice, _immediate._immediateCommandPool, _graphicsQueue);
 }
 
 void VulkanEngine::InitVulkan()
 {
-	vkb::InstanceBuilder builder;
-
-	auto inst_ret = builder.set_app_name("Vulkan learning")
-		.request_validation_layers(bUseValidationLayers)
-		.use_default_debug_messenger()
-		.require_api_version(1, 3, 0)
-		.build();
-
-
-
-	vkb::Instance vkb_inst = inst_ret.value();
 
 	// grab instance
-	_instance = vkb_inst.instance;
-	_debug_messenger = vkb_inst.debug_messenger;
+	_instance = CreateInstance();
+	/*_debug_messenger = vkb_inst.debug_messenger;*/
 
 	_windowManager->CreateWindowSurface(_instance, &_surface);
 	
-	// enabling features from vk 1.3
-	VkPhysicalDeviceVulkan13Features features{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
-	features.dynamicRendering = VK_TRUE;
-	features.synchronization2 = VK_TRUE;
-	// enabling features from vk 1.2
-	VkPhysicalDeviceVulkan12Features features12{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-	features12.bufferDeviceAddress = VK_TRUE;
-	features12.descriptorIndexing = VK_TRUE;
-	// bindless
-	features12.descriptorBindingPartiallyBound = VK_TRUE;
-	features12.runtimeDescriptorArray = VK_TRUE;
-	features12.descriptorIndexing = VK_TRUE;
-	features12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
 
-	vkb::PhysicalDeviceSelector selector{ vkb_inst };
-	vkb::PhysicalDevice physDevice{ selector
-		.set_minimum_version(1, 3)
-		.set_required_features_13(features)
-		.set_required_features_12(features12)
-		.set_surface(_surface)
-		.select()
-		.value() };
-
-
-	vkGetPhysicalDeviceMemoryProperties(physDevice, &deviceMemoryProperties);
-
-	// final vulkan device
-	vkb::DeviceBuilder deviceBuilder{ physDevice };
-
-
-	vkb::Device vkbDevice{ deviceBuilder.build().value() };
-
+	uint32_t deviceCount{ 0 };
+	vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
+	assert((deviceCount > 0, "Failed to find suitable GPUs! Error.\n"));
+	
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
 	// get the vkdevice handle used in the rest of vulkan application
-	_device = vkbDevice.device;
-	_chosenDevice = physDevice.physical_device;
+	_physDevice = ChoosePhysicalDevice(devices.data(), deviceCount);
+	_device = CreateDevice(_physDevice, _graphicsQueueFamily);
+
+
+	_graphicsQueueFamily = vktool::GetGraphicsFamilyIndex(_physDevice);
+	vkGetDeviceQueue(_device, _graphicsQueueFamily, 0, &_graphicsQueue);
+	
 	
 
 	// depth
-	vktool::GetSupportedDepthFormat(physDevice, &_depthFormat);
+	vktool::GetSupportedDepthFormat(_physDevice, &_depthFormat);
 	SetupDepthStencil();
-	// getting a graphics queue with vk bootstrap
-	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
-	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
-
 }
 void VulkanEngine::InitSwapchain()
 {
@@ -121,7 +87,7 @@ void VulkanEngine::InitCommands()
 	VkCommandPoolCreateInfo	commandPoolInfo{ vkinit::CommandPoolCreateInfo(_graphicsQueueFamily,
 		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT) };
 
-	for (int i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
+	for (int i = 0; i < g_MAX_CONCURRENT_FRAMES; ++i)
 	{
 		VK_CHECK(vkCreateCommandPool(_device, &commandPoolInfo, nullptr, &_frames[i]._commandPool));
 
@@ -161,7 +127,7 @@ void VulkanEngine::InitSyncStructures()
 	//////////// CHECK SEMAPHORE CODE LATER /////////////////////////
 	////////////////////////////////////////////////////////////////
 
-	for (int i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
+	for (int i = 0; i < g_MAX_CONCURRENT_FRAMES; ++i)
 	{
 		VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_frames[i]._renderFence));
 
@@ -183,14 +149,14 @@ void VulkanEngine::InitSyncStructures()
 			vkDestroyFence(_device, _immediate._immediateFence, nullptr);
 		});
 
-	_uniformBuffers = vkutil::CreateUniformBuffers(_device, _chosenDevice);
+	_uniformBuffers = vkutil::CreateUniformBuffers(_device, _physDevice);
 
 }
 // swapchain // 
 void VulkanEngine::CreateSwapchain(uint32_t width, uint32_t height)
 {
 
-	vkb::SwapchainBuilder swapchainBuilder{ _chosenDevice, _device, _surface };
+	vkb::SwapchainBuilder swapchainBuilder{ _physDevice, _device, _surface };
 
 	_swapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
@@ -240,7 +206,7 @@ void VulkanEngine::DestroySwapchain()
 void VulkanEngine::CleanBuffers()
 {
 	/*vkDestroyDescriptorPool(_device, globalDescriptor._pool, nullptr);*/
-	for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
+	for (uint32_t i = 0; i < g_MAX_CONCURRENT_FRAMES; ++i)
 	{
 		vkDestroyBuffer(_device, _uniformBuffers[i].handle, nullptr);
 		vkFreeMemory(_device, _uniformBuffers[i].memory, nullptr);
@@ -270,7 +236,7 @@ void VulkanEngine::cleanup()
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 		vkDestroyDevice(_device, nullptr);
 
-		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
+		/*vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);*/
 
 		vkDestroyInstance(_instance, nullptr);
 		
@@ -307,7 +273,7 @@ void VulkanEngine::draw()
 	shaderData.modelMatrix = model;
 
 	// copy matrices to the current frame UBO
-	memcpy(_uniformBuffers[_frameNumber].mapped, &shaderData, sizeof(ShaderData));
+	memcpy(_uniformBuffers[g_frameNumber].mapped, &shaderData, sizeof(ShaderData));
 
 
 	VkCommandBuffer cmd = GetCurrentFrame()._mainCommandBuffer;
@@ -425,7 +391,7 @@ void VulkanEngine::draw()
 	VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
 	//increase the number of frames drawn
-	_frameNumber = (_frameNumber + 1) % MAX_CONCURRENT_FRAMES;
+	g_frameNumber = (g_frameNumber + 1) % g_MAX_CONCURRENT_FRAMES;
 		
 }
 
@@ -626,6 +592,9 @@ void VulkanEngine::CreatePipeline()
 
 void VulkanEngine::SetupDepthStencil()
 {
+	VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
+	vkGetPhysicalDeviceMemoryProperties(_physDevice, &deviceMemoryProperties);
+
 	// Create an optimal tiled image used as the depth stencil attachment
 	VkImageCreateInfo imageCI{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	imageCI.imageType = VK_IMAGE_TYPE_2D;
@@ -707,7 +676,7 @@ void VulkanEngine::SetupExternalVulkanStructures()
 {
 	_globalDescriptor.SetDevice(_device);
 	_mesh.CreateBuffers();
-	_imguiHelper.SetStructures(_device, _instance, _chosenDevice, _graphicsQueue);
+	_imguiHelper.SetStructures(_device, _instance, _physDevice, _graphicsQueue);
 }
 
 void VulkanEngine::SetupDescriptor()

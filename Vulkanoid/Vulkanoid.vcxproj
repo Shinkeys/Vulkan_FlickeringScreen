@@ -167,6 +167,7 @@
     <ClCompile Include="src\Systems\camera.cpp" />
     <ClCompile Include="src\Systems\imgui_helper.cpp" />
     <ClCompile Include="src\Systems\window.cpp" />
+    <ClCompile Include="src\vk_device.cpp" />
     <ClCompile Include="src\vk_mesh.cpp" />
     <ClCompile Include="src\vk_tools.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -187,6 +188,7 @@
     <ClInclude Include="headers\systems\camera.h" />
     <ClInclude Include="headers\systems\imgui_helper.h" />
     <ClInclude Include="headers\types\VertexTypes.h" />
+    <ClInclude Include="headers\vk_device.h" />
     <ClInclude Include="headers\vk_mesh.h" />
     <ClInclude Include="headers\vk_resources.h" />
     <ClInclude Include="headers\systems\window.h" />
@@ -211,6 +213,7 @@
     <ClInclude Include="vendor\imgui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="assimp-vc143-mtd.dll" />
     <None Include="scripts\build.bat" />
     <None Include="shaders\main.frag" />
     <None Include="shaders\main.vert" />
