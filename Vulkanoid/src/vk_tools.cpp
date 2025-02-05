@@ -59,3 +59,4 @@ uint32_t vktool::GetGraphicsFamilyIndex(VkPhysicalDevice physDevice)
 
 	return VK_QUEUE_FAMILY_IGNORED;
 }
+

@@ -2,11 +2,11 @@
 
 #include <GLFW/glfw3.h>
 
-#include "../vendor/vk-bootstrap/src/VkBootstrap.h"
 #include "../headers/types/vk_types.h"
 #include "../headers/vk_initializers.h"
 #include "../headers/vk_pipelines.h"
 #include "../headers/vk_device.h"
+#include "../headers/vk_swapchain.h"
 
 #include <iostream>
 #include <array>
@@ -44,34 +44,32 @@ void VulkanEngine::init()
 
 void VulkanEngine::PassVulkanStructures()
 {
-	_mesh.SetStructures(_device, _physDevice, _immediate._immediateCommandPool, _graphicsQueue);
+	_mesh.SetStructures(_device, _physDevice, _immediate._immediateCommandPool, _graphicsQueue.family);
 }
 
 void VulkanEngine::InitVulkan()
 {
 
 	// grab instance
-	_instance = CreateInstance();
-	/*_debug_messenger = vkb_inst.debug_messenger;*/
+	_instance = vkdevice::CreateInstance();
+	_debugMessenger = vkdebug::CreateDebugCallback(_instance);
 
 	_windowManager->CreateWindowSurface(_instance, &_surface);
 	
 
 	uint32_t deviceCount{ 0 };
-	vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
+	VK_CHECK(vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr));
 	assert((deviceCount > 0, "Failed to find suitable GPUs! Error.\n"));
 	
 	std::vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
+	VK_CHECK(vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data()));
 	// get the vkdevice handle used in the rest of vulkan application
-	_physDevice = ChoosePhysicalDevice(devices.data(), deviceCount);
-	_device = CreateDevice(_physDevice, _graphicsQueueFamily);
+	_physDevice = vkdevice::ChoosePhysicalDevice(devices.data(), deviceCount);
+	_device = vkdevice::CreateDevice(_physDevice, _graphicsQueue.index);
 
 
-	_graphicsQueueFamily = vktool::GetGraphicsFamilyIndex(_physDevice);
-	vkGetDeviceQueue(_device, _graphicsQueueFamily, 0, &_graphicsQueue);
-	
-	
+	_graphicsQueue.index = vktool::GetGraphicsFamilyIndex(_physDevice);
+	vkGetDeviceQueue(_device, _graphicsQueue.index, 0, &_graphicsQueue.family);
 
 	// depth
 	vktool::GetSupportedDepthFormat(_physDevice, &_depthFormat);
@@ -84,7 +82,7 @@ void VulkanEngine::InitSwapchain()
 void VulkanEngine::InitCommands()
 {
 	// creating a command pool for commands submitted to the graphics queue
-	VkCommandPoolCreateInfo	commandPoolInfo{ vkinit::CommandPoolCreateInfo(_graphicsQueueFamily,
+	VkCommandPoolCreateInfo	commandPoolInfo{ vkinit::CommandPoolCreateInfo(_graphicsQueue.index,
 		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT) };
 
 	for (int i = 0; i < g_MAX_CONCURRENT_FRAMES; ++i)
@@ -155,27 +153,35 @@ void VulkanEngine::InitSyncStructures()
 // swapchain // 
 void VulkanEngine::CreateSwapchain(uint32_t width, uint32_t height)
 {
+	_surface = vkswapchain::CreateWindowSurface(_instance, _windowManager->GetWindowInstance());
 
-	vkb::SwapchainBuilder swapchainBuilder{ _physDevice, _device, _surface };
+	VkBool32 presentSupported{ false };
+	VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(_physDevice, _graphicsQueue.index, _surface, &presentSupported));
+	assert((presentSupported, "Vulkan error. Unable to find GPU with surface support!"));
 
-	_swapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+	VkSurfaceCapabilitiesKHR capabilities;
+	VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physDevice, _surface, &capabilities));
 
-	vkb::Swapchain vkbSwapChain = swapchainBuilder
-		.set_desired_format(VkSurfaceFormatKHR{ .format = _swapchainImageFormat, 
-			.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
-		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-		.set_desired_extent(width, height)
-		.add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-		.build()
-		.value();
+	_swapchainImageFormat = vkswapchain::GetSwapchainSurfaceFormat(_physDevice, _surface);
 
-	_swapchainExtent = vkbSwapChain.extent;
-	// store swapchain and its related images
-	_swapchain = vkbSwapChain.swapchain;
-	_swapchainImages = vkbSwapChain.get_images().value();
-	_swapchainImagesView = vkbSwapChain.get_image_views().value();
+	VkPresentModeKHR presentMode = vkswapchain::GetSwapchainPresentMode(_physDevice, _surface);
 
+	
+	// VK_PRESENT_MODE_FIFO_KHR - makes a queue of images and swapchain takes images from front...
+	// if queue is full then program should wait. Usually must have
+	// VK_PRESENT_MODE_MAILBOX_KHR - makes a queue of images and swawpchain takes images from front...
+	// if queue is full then the program replace images that are already queued...
+	// used to render frames as FAST as POSSIBLE
+	// although mailbox maybe not available for android, so would query for supported type.
+	_swapchainExtent = vkswapchain::GetSwapchainExtent(_physDevice, _surface, _windowManager->GetWindowInstance());
 
+	VulkanSwapchain swapchainData = vkswapchain::CreateSwapchain(_device, _surface, capabilities, presentMode,
+		_swapchainImageFormat, _swapchainExtent, _graphicsQueue.index);
+
+	_swapchain = swapchainData.swapchain;
+
+	_swapchainImages = swapchainData.swapchainImages;
+	_swapchainImagesView = swapchainData.swapchainImageView;
 }
 
 void VulkanEngine::UpdateSwapchain()
@@ -215,6 +221,7 @@ void VulkanEngine::CleanBuffers()
 	
 }
 
+
 void VulkanEngine::cleanup()
 {
 	if (_isInitialized) {
@@ -229,6 +236,7 @@ void VulkanEngine::cleanup()
 		_globalDescriptor.Cleanup();
 		_mesh.Cleanup();
 
+
 		DestroyDepthStencil();
 
 		_imguiHelper.DestroyImgui();
@@ -236,7 +244,7 @@ void VulkanEngine::cleanup()
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 		vkDestroyDevice(_device, nullptr);
 
-		/*vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);*/
+		vkdebug::DestroyDebugCallback(_instance, _debugMessenger);
 
 		vkDestroyInstance(_instance, nullptr);
 		
@@ -371,7 +379,7 @@ void VulkanEngine::draw()
 
 	//submit command buffer to the queue and execute it.
 	// _renderFence will now block until the graphic commands finish execution
-	VK_CHECK(vkQueueSubmit2(_graphicsQueue, 1, &submit, GetCurrentFrame()._renderFence));
+	VK_CHECK(vkQueueSubmit2(_graphicsQueue.family, 1, &submit, GetCurrentFrame()._renderFence));
 
 	//prepare present
 	// this will put the image we just rendered to into the visible window.
@@ -388,7 +396,7 @@ void VulkanEngine::draw()
 
 	presentInfo.pImageIndices = &imageIndex;
 
-	VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
+	VK_CHECK(vkQueuePresentKHR(_graphicsQueue.family, &presentInfo));
 
 	//increase the number of frames drawn
 	g_frameNumber = (g_frameNumber + 1) % g_MAX_CONCURRENT_FRAMES;
@@ -665,7 +673,7 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 	VkSubmitInfo2 submit = vkinit::SubmitInfo(&cmdInfo, nullptr, nullptr);
 
 	// submit command buffer to the queue. render fence will be blocked until the graphics commands finish exec
-	VK_CHECK(vkQueueSubmit2(_graphicsQueue, 1, &submit, _immediate._immediateFence));
+	VK_CHECK(vkQueueSubmit2(_graphicsQueue.family, 1, &submit, _immediate._immediateFence));
 
 	VK_CHECK(vkWaitForFences(_device, 1, &_immediate._immediateFence, true, DEFAULT_FENCE_TIMEOUT));
 
@@ -676,7 +684,7 @@ void VulkanEngine::SetupExternalVulkanStructures()
 {
 	_globalDescriptor.SetDevice(_device);
 	_mesh.CreateBuffers();
-	_imguiHelper.SetStructures(_device, _instance, _physDevice, _graphicsQueue);
+	_imguiHelper.SetStructures(_device, _instance, _physDevice, _graphicsQueue.family);
 }
 
 void VulkanEngine::SetupDescriptor()

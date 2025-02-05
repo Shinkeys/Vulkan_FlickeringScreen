@@ -14,7 +14,6 @@
 
 #include "vk_resources.h"
 
-constexpr uint32_t g_MAX_DRAW_COUNT = 1024;
 
 struct Geometry
 {

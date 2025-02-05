@@ -7,6 +7,7 @@
 #include "../../vendor/glm/glm/glm.hpp"
 
 #include <iostream>
+#include <vector>
 #include <map>
 
 //we will add our main reusable types here
@@ -32,17 +33,17 @@ struct MeshBuffer
 
 struct AllocatedImage
 {
-	VkImage image;
-	VkImageView imageView;
+	VkImage image{ VK_NULL_HANDLE };
+	VkImageView imageView{ VK_NULL_HANDLE };
 	VkExtent3D imageExtent;
 	VkFormat imageFormat;
 };
 
 struct DepthStencil
 {
-	VkImage image;
-	VkDeviceMemory memory;
-	VkImageView view;
+	VkImage image{ VK_NULL_HANDLE };
+	VkDeviceMemory memory{ VK_NULL_HANDLE };
+	VkImageView view{ VK_NULL_HANDLE };
 };
 
 // uniform buffer block object
@@ -54,6 +55,15 @@ struct UniformBuffer : VulkanBuffer
 	uint8_t* mapped{ nullptr };
 };
 
+struct VulkanSwapchain
+{
+	VkSwapchainKHR swapchain{VK_NULL_HANDLE};
+	std::vector<VkImage> swapchainImages;
+	std::vector<VkImageView> swapchainImageView;
+
+
+};
+
 
 struct ShaderData
 {
@@ -62,6 +72,11 @@ struct ShaderData
 	glm::mat4 projMatrix;
 };
 
+struct QueueFamily
+{
+	VkQueue family;
+	uint32_t index;
+};
 
 static int g_frameNumber{ 0 };
 constexpr unsigned int g_MAX_CONCURRENT_FRAMES = 2;
@@ -78,17 +93,6 @@ constexpr uint32_t g_API_VERSION = VK_API_VERSION_1_3;
 			abort();                                                \
 		}                                                           \
 	} while (0)
-
-namespace vkdebug
-{
-#ifdef NDEBUG
-	constexpr bool validationLayers = false;
-#else
-	constexpr bool validationLayers = true;
-#endif
-}
-
-
 
 enum class VulkanoidOperations
 {

@@ -13,9 +13,6 @@
 #include "vk_mesh.h"
 
 
-
-
-
 #include <vector>
 #include <deque>
 #include <array>
@@ -70,12 +67,11 @@ public:
 
 	FrameData& GetCurrentFrame() { return _frames[g_frameNumber % g_MAX_CONCURRENT_FRAMES]; };
 
-	VkQueue _graphicsQueue;
-	uint32_t _graphicsQueueFamily;
+	QueueFamily _graphicsQueue;
 
 	// VK settings //
 	VkInstance _instance;
-	VkDebugUtilsMessengerEXT _debug_messenger;
+	VkDebugUtilsMessengerEXT _debugMessenger;
 	VkPhysicalDevice _physDevice;
 	VkDevice _device; // device for commands
 	VkSurfaceKHR _surface; // window surface
@@ -84,7 +80,6 @@ public:
 	// Swapchain settings //
 	VkSwapchainKHR _swapchain;
 	VkFormat _swapchainImageFormat;
-
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImagesView;
 	VkExtent2D _swapchainExtent;
